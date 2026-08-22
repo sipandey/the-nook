@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Newsreader, Hanken_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
 import "./globals.css";
@@ -14,6 +14,30 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+/**
+ * Editorial type system (Newsreader + Hanken Grotesk) — added alongside
+ * the existing Geist default, not replacing it. Scoped intentionally: only
+ * the screens rebuilt to the new "editorial" visual direction (see
+ * docs/UX_DESIGN_BRIEF.md) opt into these via the font-editorial-display /
+ * font-editorial-sans utilities in globals.css. Every other screen keeps
+ * the original Geist look until it's deliberately redone — this is a
+ * transitional state, not a finished rebrand.
+ *
+ * Was Playfair Display + Public Sans (black-primary "Nook Design System")
+ * until the sage/terracotta "Sanctuary" system replaced it project-wide —
+ * see the design-system-migration decision in .agent-room/decisions.md.
+ */
+const newsreader = Newsreader({
+  variable: "--font-newsreader",
+  subsets: ["latin"],
+  style: ["normal", "italic"],
+});
+
+const hankenGrotesk = Hanken_Grotesk({
+  variable: "--font-hanken-grotesk",
+  subsets: ["latin"],
+});
+
 export const metadata: Metadata = {
   title: "The Nook",
   description: "A quiet place to write, reflect, and watch yourself grow.",
@@ -25,8 +49,22 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <ClerkProvider>
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${hankenGrotesk.variable} h-full antialiased`}
       >
+        <head>
+          {/* Material Symbols — used only by the newly rebuilt "editorial"
+              screens; the rest of the app still uses inline SVG icons.
+              The no-page-custom-font rule below is a Pages Router-era
+              check (targets _document.js, which doesn't exist in App
+              Router) — this IS the documented App Router pattern for a
+              stylesheet next/font doesn't cover, in the root layout so
+              it's global, not single-page. */}
+          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+          <link
+            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
+            rel="stylesheet"
+          />
+        </head>
         <body className="min-h-full flex flex-col">
           <Providers>{children}</Providers>
         </body>

@@ -42,9 +42,134 @@
   --color-warn-soft: var(--color-warn-soft);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Editorial type system — see the note in layout.tsx. Only the newly
+     rebuilt screens (Signup, Sign-in, Passphrase Setup, Recovery Code, Home
+     empty state, Write, Manifestations, Playback, Settings, onboarding)
+     use these; everything else keeps --font-sans (Geist). */
+  --font-editorial-display: var(--font-newsreader);
+  --font-editorial-sans: var(--font-hanken-grotesk);
+
+  /*
+   * "The Nook" editorial design system — "Sanctuary" sage/terracotta
+   * palette, from the Stitch project 13778589545983828422 (Onboarding &
+   * Authentication screens). Replaces the earlier black-primary Playfair
+   * Display palette project-wide — see the design-system-migration
+   * decision in .agent-room/decisions.md. Material Design 3-style token
+   * names, scoped to the same set of rebuilt screens as the fonts above
+   * (via bg-surface-container-lowest etc., not the plain --color-* tokens
+   * used by the older screens still on Geist).
+   */
+  --color-surface: #faf9f6;
+  --color-surface-dim: #dadad7;
+  --color-surface-bright: #faf9f6;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #f4f4f0;
+  --color-surface-container: #efeeea;
+  --color-surface-container-high: #e9e8e5;
+  --color-surface-container-highest: #e3e2df;
+  --color-on-surface: #1a1c1a;
+  --color-on-surface-variant: #424842;
+  --color-inverse-surface: #2f312f;
+  --color-inverse-on-surface: #f1f1ed;
+  --color-outline: #737972;
+  --color-outline-variant: #c2c8c0;
+  --color-primary: #4a654e;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #8ba88e;
+  --color-on-primary-container: #233d29;
+  --color-primary-fixed: #cceace;
+  --color-primary-fixed-dim: #b0ceb2;
+  --color-secondary: #99452c;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #ff9475;
+  --color-on-secondary-container: #762b14;
+  --color-error: #ba1a1a;
+  --color-on-error: #ffffff;
+  --color-error-container: #ffdad6;
+  --color-on-error-container: #93000a;
+  --color-night-bg: #0f1410;
+  --color-night-surface: #1a2018;
+  --color-mood-sage: #8ba88e;
+  --color-mood-rose: #c4949d;
+  --color-mood-ochre: #cd9a5b;
+  --color-privacy-safe: #4a654e;
+
+  --font-weight-editorial-medium: 500;
+  --font-weight-editorial-semibold: 600;
+
+  --text-display-lg: 40px;
+  --text-display-lg--line-height: 48px;
+  --text-display-lg--letter-spacing: -0.02em;
+  --text-display-lg--font-weight: 600;
+  --text-headline-lg: 32px;
+  --text-headline-lg--line-height: 40px;
+  --text-headline-lg--font-weight: 600;
+  --text-headline-lg-mobile: 32px;
+  --text-headline-lg-mobile--line-height: 40px;
+  --text-headline-lg-mobile--letter-spacing: -0.02em;
+  --text-headline-lg-mobile--font-weight: 600;
+  --text-headline-md: 24px;
+  --text-headline-md--line-height: 32px;
+  --text-headline-md--font-weight: 500;
+  --text-title-md: 20px;
+  --text-title-md--line-height: 28px;
+  --text-title-md--font-weight: 500;
+  --text-body-lg: 18px;
+  --text-body-lg--line-height: 28px;
+  --text-body-md: 16px;
+  --text-body-md--line-height: 24px;
+  --text-label-caps: 12px;
+  --text-label-caps--line-height: 16px;
+  --text-label-caps--letter-spacing: 0.08em;
+  --text-label-caps--font-weight: 600;
+  --text-label-sm: 13px;
+  --text-label-sm--line-height: 16px;
+  --text-label-sm--letter-spacing: 0.05em;
+  --text-label-sm--font-weight: 600;
+  --text-transcription-italic: 18px;
+  --text-transcription-italic--line-height: 28px;
+
+  --spacing-unit: 8px;
+  --spacing-container-margin: 24px;
+  --spacing-gutter: 16px;
+  --spacing-section-gap: 40px;
+  --spacing-stack-tight: 4px;
+  --spacing-stack-loose: 12px;
+  --spacing-safe: env(safe-area-inset-bottom);
+
+  /* Onboarding screens (Stitch project 13778589545983828422) use these
+     spacing names directly; kept as their own tokens rather than forcing
+     every new screen's className onto the older unit/container-margin
+     naming above. */
+  --spacing-inline-gap: 12px;
+  --spacing-stack-gap: 32px;
+  --spacing-container-padding: 24px;
 }
 
 body {
   background: var(--color-bg);
   color: var(--color-text);
+}
+
+/* Used by Home's empty-state illustration (src/app/(app)/page.tsx). */
+@keyframes breathe {
+  0% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.02); opacity: 1; }
+}
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite alternate;
+}
+@media (prefers-reduced-motion: reduce) {
+  .animate-breathe {
+    animation: none;
+  }
+}
+
+/* Used by Settings' row buttons (src/app/(app)/settings/page.tsx). */
+.setting-row {
+  transition: background-color 0.2s ease;
+}
+.setting-row:active {
+  background-color: var(--color-surface-container-highest);
 }
