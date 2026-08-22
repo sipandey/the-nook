@@ -64,14 +64,29 @@ export interface PlaybackInput {
 }
 
 export interface PlaybackNarrative {
-  moodTrendSummary: string;
-  highlightQuote: string;
+  /** Big headline for the mood-trend story card. */
   headline: string;
+  /** Supporting subtext for the mood-trend card. */
+  moodTrendSummary: string;
+  /** A verbatim quote pulled from one of the entries — never paraphrased,
+   *  since the highlight card presents it as the user's own words. */
+  highlightQuote: string;
+  /** Which entry date the quote came from, e.g. "Tuesday". */
+  highlightDate: string;
+  /** A short note in the "letter from your past self" card style —
+   *  written as if addressed to today, in the user's chosen tone. */
+  letter: string;
 }
 
 /** Generates the playback narrative from decrypted entries. Never persist
  *  the input; if the caller wants to cache the output, it must re-encrypt
- *  it client-side first (docs/ARCHITECTURE.md §5, point 2). */
+ *  it client-side first (docs/ARCHITECTURE.md §5, point 2).
+ *
+ *  Only produces the two AI-authored cards content depends on (mood trend,
+ *  highlight quote, letter) — the "then vs now" comparison card is computed
+ *  separately from real mood_score/tag data (see src/lib/period.ts) rather
+ *  than asked of the model, since that's a case where honest arithmetic on
+ *  the user's own data beats an LLM guessing at a comparison. */
 export async function generatePlaybackNarrative(
   input: PlaybackInput,
 ): Promise<PlaybackNarrative> {
@@ -83,15 +98,19 @@ export async function generatePlaybackNarrative(
         role: "user",
         content:
           `Summarize this ${input.period}'s journal entries as JSON with keys ` +
-          `"moodTrendSummary", "highlightQuote" (verbatim from an entry), and ` +
-          `"headline". Entries:\n` +
+          `"headline" (short, punchy), "moodTrendSummary" (one supporting ` +
+          `sentence), "highlightQuote" (verbatim, copied exactly from one ` +
+          `entry's text — do not paraphrase), "highlightDate" (that entry's ` +
+          `date as given), and "letter" (2-3 sentences, written as a short ` +
+          `note from their past self to today, grounded in what they ` +
+          `actually wrote). Entries:\n` +
           input.entryPlaintexts
             .map((e) => `[${e.date}, mood ${e.mood}/5] ${e.text}`)
             .join("\n"),
       },
     ],
     response_format: { type: "json_object" },
-    max_tokens: 400,
+    max_tokens: 500,
   });
 
   return JSON.parse(
