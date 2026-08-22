@@ -1,0 +1,12 @@
+{
+  "name": "journal",
+  "tools": [
+    "git",
+    "claude"
+  ],
+  "language": "javascript",
+  "packageManager": "npm",
+  "defaultBranch": "main",
+  "skillPacks": [],
+  "profile": "minimal"
+}
