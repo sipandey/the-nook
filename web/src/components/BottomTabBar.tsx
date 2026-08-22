@@ -2,76 +2,40 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { MaterialIcon } from "@/components/MaterialIcon";
 
 const TABS = [
-  {
-    href: "/",
-    label: "Home",
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M3 9.5L10 3l7 6.5" />
-        <path d="M5 8.5V17h10V8.5" />
-      </svg>
-    ),
-  },
-  {
-    href: "/journal",
-    label: "Journal",
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M4 3.5h9a2 2 0 0 1 2 2V17H6a2 2 0 0 1-2-2V3.5z" />
-        <path d="M4 3.5a2 2 0 0 0-2 2V15a2 2 0 0 0 2 2" />
-      </svg>
-    ),
-  },
-  {
-    href: "/playback",
-    label: "Playback",
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="10" cy="10" r="7.5" />
-        <path d="M8.5 7.2 13 10l-4.5 2.8V7.2z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/manifestations",
-    label: "Manifest",
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <path d="M10 17S3 12.5 3 7.8A3.8 3.8 0 0 1 10 5.5 3.8 3.8 0 0 1 17 7.8C17 12.5 10 17 10 17z" />
-      </svg>
-    ),
-  },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: (
-      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.5">
-        <circle cx="10" cy="10" r="2.5" />
-        <path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.4 4.6l-1.4 1.4M6 12.6l-1.4 1.4M15.4 15.4l-1.4-1.4M6 7.4 4.6 6" />
-      </svg>
-    ),
-  },
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/write", label: "Journal", icon: "edit_note" },
+  { href: "/playback", label: "Playback", icon: "play_circle" },
+  { href: "/manifestations", label: "Manifest", icon: "auto_awesome" },
 ];
 
+/**
+ * Editorial-style bottom nav — see the note in layout.tsx. Used by every
+ * screen rebuilt to the new visual system (Home, Write, Manifestations,
+ * Settings). The Playback hub/story screens are "Cinematic Night Mode" and
+ * render their own dark-themed nav inline rather than using this component.
+ */
 export function BottomTabBar() {
   const pathname = usePathname();
 
   return (
-    <nav className="flex flex-shrink-0 items-center justify-around border-t border-border bg-background py-2">
+    <nav className="md:hidden fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-lowest flex justify-around items-center px-gutter py-stack-loose pb-safe shadow-[0_-4px_20px_rgba(0,0,0,0.04)]">
       {TABS.map((tab) => {
         const active = tab.href === "/" ? pathname === "/" : pathname.startsWith(tab.href);
         return (
           <Link
             key={tab.href}
             href={tab.href}
-            className={`flex flex-col items-center gap-0.5 px-2 py-1 text-[9px] ${
-              active ? "text-accent" : "text-muted"
+            className={`flex flex-col items-center justify-center transition-transform duration-300 active:scale-90 ${
+              active
+                ? "text-primary bg-secondary-container rounded-full px-4 py-1"
+                : "text-secondary p-2 rounded-lg hover:bg-surface-container-low"
             }`}
           >
-            {tab.icon}
-            {tab.label}
+            <MaterialIcon name={tab.icon} filled={active} className="mb-1" />
+            <span className="font-editorial-sans text-label-caps uppercase tracking-wider">{tab.label}</span>
           </Link>
         );
       })}
