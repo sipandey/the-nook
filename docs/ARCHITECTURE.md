@@ -1,6 +1,6 @@
 # The Nook — Product & Architecture Reference
 
-Status: pre-build design reference. This document is the source of truth for product intent, data model, and system architecture. Treat it as the base context for implementation — human or AI agent.
+Status: implemented. Every screen in the design canvas is built and wired to real data — see [`web/README.md`](../web/README.md) for the concrete "what's built" list and the honest remaining-gaps list. This document stays the source of truth for product intent, data model, and system architecture; treat it as the base context for implementation — human or AI agent.
 
 ## 1. Product summary
 
@@ -50,6 +50,7 @@ erDiagram
     MANIFESTATIONS ||--o{ MANIFESTATION_SIGNALS : accumulates
     ENTRIES ||--o{ MANIFESTATION_SIGNALS : "detected in"
     USERS ||--o{ NOTIFICATION_PREFS : configures
+    USERS ||--o{ DEVICE_SYNC_SESSIONS : "pairs via"
 
     USERS {
         text clerk_user_id PK
@@ -57,10 +58,12 @@ erDiagram
     }
     JOURNAL_KEYS {
         text user_id FK
-        bytea wrapped_dek
-        bytea wrapped_dek_salt
-        bytea wrapped_dek_recovery
-        bytea recovery_salt
+        text wrapped_dek
+        text wrapped_dek_iv
+        text wrapped_dek_salt
+        text wrapped_dek_recovery
+        text wrapped_dek_recovery_iv
+        text wrapped_dek_recovery_salt
         jsonb kdf_params
     }
     ENTRIES {
@@ -69,8 +72,8 @@ erDiagram
         timestamptz created_at
         int mood_score
         text[] tags
-        bytea encrypted_content
-        bytea iv
+        text encrypted_content
+        text iv
     }
     MANIFESTATIONS {
         uuid id PK
@@ -79,8 +82,8 @@ erDiagram
         text category
         text cadence
         boolean auto_detect
-        bytea encrypted_text
-        bytea iv
+        text encrypted_text
+        text iv
         text status
     }
     MANIFESTATION_SIGNALS {
@@ -97,9 +100,20 @@ erDiagram
         boolean playback_ready_enabled
         boolean manifestation_enabled
     }
+    DEVICE_SYNC_SESSIONS {
+        text pairing_id PK
+        text user_id FK
+        text encrypted_dek
+        text encrypted_dek_iv
+        timestamptz expires_at
+    }
 ```
 
 Design rule: only the metadata a query genuinely needs (mood score, tags, timestamps, cadence/status flags) is stored in the clear. Anything that is the user's actual words — entry content, manifestation text — is stored only as `(encrypted_content, iv)`, encrypted client-side before it ever reaches the network.
+
+Ciphertext/key-material columns are `text` (base64), not `bytea` — see `0002_ciphertext_as_text.sql`. The original `bytea` choice assumed Postgres would hold raw binary, but everything in `src/lib/crypto` produces base64 strings for JSON transport anyway, and PostgREST's `bytea` wire format (hex-encoded) doesn't match that without extra encoding work that buys nothing here.
+
+`device_sync_sessions` (`0003_device_sync.sql`) is deliberately ephemeral — see §5's multi-device note and §6.7.
 
 ## 5. Encryption architecture
 
@@ -126,7 +140,7 @@ Consequences that follow from this model, worth stating explicitly for implement
 
 1. **The server never persists plaintext.** The one exception is transient, in-memory handling during an AI call (§6.4) — never logged, never written to disk or a database row.
 2. **AI-generated output derived from plaintext is itself sensitive.** A playback narrative or a detected manifestation signal is generated from decrypted content. If it's cached server-side for reuse, it must be re-encrypted client-side with the DEK before that round-trip — it does not get a free pass just because the AI produced it rather than the user.
-3. **No multi-device sync of the DEK is specified yet.** Today, unlocking on a new device means re-entering the journal passphrase to re-derive the KEK and unwrap the same `wrapped_dek` row. This works, but see §8 for what it doesn't yet handle.
+3. **Multi-device sync doesn't touch this model at all — it's a parallel path.** Re-entering the passphrase always works (same `wrapped_dek` row, any device). For a faster handoff, an already-unlocked device can transmit the DEK to a new one via a short-lived, server-relayed exchange encrypted under a one-time "channel key" that's generated on the new device and never sent to the server — see §6.7. The server only ever holds that ciphertext, briefly.
 
 ## 6. Sequence diagrams
 
@@ -228,14 +242,17 @@ sequenceDiagram
     participant EF as Vercel Function (AI calls)
     participant AI as OpenAI Whisper
 
-    U->>C: Record voice entry
-    C->>EF: Stream audio
+    U->>C: Record voice entry (MediaRecorder + AnalyserNode waveform)
+    U->>C: Tap "Done"
+    C->>EF: POST the full recorded clip
     EF->>AI: Transcribe
     AI-->>EF: Transcript
-    EF-->>C: Transcript (live, shown as it streams)
-    C->>C: Encrypt transcript with DEK, same path as §6.3
+    EF-->>C: Transcript, dropped into the text editor for review
+    C->>C: Encrypt on save, same path as §6.3
     Note over EF: Raw audio is not persisted server-side
 ```
+
+Deliberately **batch, not live-streaming**: the waveform shown while recording is real (genuine audio levels via `AnalyserNode`), but the transcript only appears after "Done" — Whisper's REST API has no incremental-result mode. True live, word-by-word transcription would need OpenAI's Realtime (WebSocket) API, evaluated and explicitly deferred as a materially bigger swap than this covers.
 
 ### 6.6 Daily reminder notification
 
@@ -253,6 +270,38 @@ sequenceDiagram
 ```
 
 Note: the lock-screen mockup in the design canvas shows descriptively rich preview text (e.g. quoting the day's prompt). That's illustrative of the *feature*, not a settled decision — see the open question in §8 about notification content richness vs. lock-screen exposure.
+
+### 6.7 Multi-device key sync
+
+```mermaid
+sequenceDiagram
+    actor New as New device (locked)
+    actor Old as Already-unlocked device
+    participant API as Vercel Route Handler
+    participant DB as Supabase
+
+    New->>New: Generate pairingId + random channel key (AES-256, client-only)
+    New->>API: POST pairingId
+    API->>DB: Insert device_sync_sessions row (5 min expiry)
+    New->>New: Show QR encoding a URL with #key=channelKey (fragment, never sent to any server)
+
+    Old->>Old: Scan QR / open link — lands on /settings/device-sync/confirm
+    Note over Old: Getting here already required this device to be signed in AND unlocked (UnlockGate) — that IS "already-unlocked device"
+    Old->>Old: encryptedDek = AES-GCM(DEK, channelKey)
+    Old->>API: PATCH pairingId {encryptedDek, iv}
+    API->>API: Verify caller's Clerk userId matches the session's owner
+    API->>DB: Store encrypted_dek, encrypted_dek_iv
+
+    loop Poll every ~2.5s
+        New->>API: GET pairingId
+        API->>DB: Fetch row
+    end
+    API-->>New: encryptedDek, iv
+    API->>DB: Delete row (single-use)
+    New->>New: DEK = decrypt(encryptedDek, channelKey) — unlocked
+```
+
+The server only ever holds `encrypted_dek` — ciphertext under a key it never sees, for at most 5 minutes, deleted on pickup. This runs alongside passphrase/recovery-code unlock as a third option, not a replacement for either.
 
 ## 7. System architecture
 
@@ -288,21 +337,25 @@ graph TD
     SW -->|push| UI
 ```
 
+This diagram shows the intended shape, not a claim that every box is live: `SW` (service worker) and `IDB` (IndexedDB draft cache) are designed but not yet wired, and `Cron` isn't configured — see §8 for the concrete gap list.
+
 ## 8. Security boundaries & explicit non-goals
 
 - The database and backend code never store readable entry content. The only place plaintext exists outside the client is transiently inside a Vercel Function during an AI call.
 - Account password (Clerk) and journal passphrase are independent. Compromising or resetting one does not expose data protected by the other.
 - There is no "forgot journal passphrase" server-side reset. The recovery code is the only backup path, by design — this is a stated cost of the privacy model, not a gap to close.
-- Not yet addressed (flag before building the relevant screen):
-  - **Notification content richness vs. lock-screen privacy.** The lock-screen mockup shows descriptive previews; decide whether shipped notifications stay generic ("Time to reflect") or allow rich previews with a Settings toggle to suppress them on the lock screen.
-  - **Multi-device key handling.** Today: re-enter the passphrase per device. No QR-code device-linking or secure sync flow is designed yet.
-  - **Data export / account deletion.** Needed for basic user trust and likely for compliance; not yet designed.
-  - **Whisper audio retention.** Currently specified as not persisted server-side — confirm this holds once voice entries are implemented, since it affects that function's implementation, not just policy.
-  - **Offline write conflict handling.** IndexedDB holds drafts written offline; the sync-back behavior on reconnect (retry order, conflict resolution) isn't designed yet.
+- Resolved since the last pass:
+  - **Multi-device key handling.** Built — see §6.7. QR-code handoff between an already-unlocked device and a new one, server-relayed but never server-readable.
+  - **Data export / account deletion.** Built, in Settings. Export decrypts everything client-side and downloads JSON — no server route needed, since the server never had anything but ciphertext. Deletion is type-to-confirm, wipes every Supabase table for the user, then deletes the Clerk account itself (data first, while the session's still valid; Clerk account last, since that's irreversible).
+  - **Whisper audio retention.** Confirmed as implemented: `VoiceRecorder` sends the recorded blob directly to `/api/ai/transcribe` and neither side writes it anywhere. Also now explicitly *not* live-streaming — see §6.5.
+- Still open (flag before building the relevant piece):
+  - **Notification content richness vs. lock-screen privacy.** The lock-screen mockup shows descriptive previews; decide whether shipped notifications stay generic ("Time to reflect") or allow rich previews with a Settings toggle to suppress them on the lock screen. Moot until Vercel Cron + Web Push are actually wired (`notification_prefs` stores the preference; nothing triggers a push yet).
+  - **Offline write conflict handling.** The composer currently holds its text in plain React state — a dropped connection or refresh mid-entry loses it. The IndexedDB draft-cache idea in §3/§7 is still just a plan, not implemented; there's no sync-back/conflict-resolution behavior to design until the cache itself exists.
+  - **PWA installability.** Serwist is installed but no service worker is registered — no offline app-shell caching, no installable-to-home-screen behavior yet.
 
 ## 9. Screen inventory
 
-Full visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact/36d63c97-7c7c-4fd6-8234-b35ea36ed857).
+Full visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact/36d63c97-7c7c-4fd6-8234-b35ea36ed857). This table describes the design canvas as designed — where implementation deliberately diverged (voice transcription is batch, not the live streaming shown in the mockup; see §6.5), the mockup description stays as the original intent and the actual behavior is documented where it's implemented. For current build status per area, see [`web/README.md`](../web/README.md)'s "What's built" / "Known gaps" lists.
 
 | Screen | Purpose |
 |---|---|
