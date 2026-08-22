@@ -11,6 +11,7 @@ import { useSaveEntry } from "@/lib/hooks/useSaveEntry";
 import { useEntries } from "@/lib/hooks/useEntries";
 import { useSessionStore } from "@/lib/store/session";
 import { computeStreak } from "@/lib/streak";
+import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
 
 type Stage = "voice" | "text" | "saved";
 
@@ -20,6 +21,7 @@ function WriteContent() {
   const dek = useSessionStore((s) => s.dek);
   const { data: entries } = useEntries();
   const saveEntry = useSaveEntry();
+  const detectSignals = useSignalDetector();
 
   const [stage, setStage] = useState<Stage>(params.get("mode") === "voice" ? "voice" : "text");
   const [text, setText] = useState("");
@@ -55,6 +57,9 @@ function WriteContent() {
     });
     setSavedId(result.id);
     setStage("saved");
+    // Fire-and-forget: the entry is already saved and shown to the user;
+    // this shouldn't block or fail the save if it errors.
+    void detectSignals(result.id, text.trim(), dek);
   }
 
   if (stage === "voice") {

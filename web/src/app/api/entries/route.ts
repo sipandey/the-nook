@@ -30,13 +30,12 @@ export async function GET(request: Request) {
 }
 
 /**
- * Not yet built: after inserting the entry, checking it against the user's
- * active manifestations (auto_detect = true) and writing rows to
- * manifestation_signals. That needs the plaintext (this handler never sees
- * it) and an AI call, so it belongs client-side or in a transient function
- * the same way playback generation works (docs/ARCHITECTURE.md §6.4) — not
- * bolted onto this handler. Flagging the gap rather than leaving
- * manifestations' signal counts looking automatic when they're not yet.
+ * Manifestation-signal detection against the plaintext this handler never
+ * sees happens client-side, after a successful save — see
+ * src/lib/hooks/useSignalDetector.ts, wired in from
+ * src/app/(app)/write/page.tsx. Kept out of this handler on purpose, same
+ * transient-plaintext boundary as playback generation
+ * (docs/ARCHITECTURE.md §6.4).
  */
 export async function POST(request: Request) {
   const { userId } = await auth();

@@ -118,6 +118,62 @@ export async function generatePlaybackNarrative(
   ) as PlaybackNarrative;
 }
 
+export interface ManifestationForDetection {
+  id: string;
+  text: string;
+}
+
+export interface DetectedSignal {
+  manifestationId: string;
+  confidence: number;
+}
+
+/**
+ * Classifies whether a freshly-written entry shows genuine progress toward
+ * any of the user's active manifestations. Tone-agnostic — this is a
+ * structured judgment task, not user-facing copy. Deliberately conservative
+ * in the prompt: most entries relate to none of the list, and a false
+ * positive here means a wrong "3 entries show this happening" claim on
+ * something the user is trusting the app to notice honestly.
+ */
+export async function detectManifestationSignals(
+  entryText: string,
+  manifestations: ManifestationForDetection[],
+): Promise<DetectedSignal[]> {
+  if (manifestations.length === 0) return [];
+
+  const response = await openai.chat.completions.create({
+    model: TEXT_MODEL,
+    messages: [
+      {
+        role: "system",
+        content:
+          "You detect whether a journal entry shows genuine, concrete progress " +
+          "toward something the user said they were working on. Be conservative " +
+          "— most entries relate to none of the list. Only include a manifestation " +
+          "if the entry describes something real and specific, not just a mood " +
+          "or vague hope.",
+      },
+      {
+        role: "user",
+        content:
+          "Manifestations (id: text):\n" +
+          manifestations.map((m) => `${m.id}: ${m.text}`).join("\n") +
+          `\n\nJournal entry:\n${entryText}\n\n` +
+          'Return JSON {"signals": [{"manifestationId": "...", "confidence": 0-1}]} ' +
+          "for any that genuinely apply. Empty array if none do.",
+      },
+    ],
+    response_format: { type: "json_object" },
+    max_tokens: 300,
+  });
+
+  const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}") as {
+    signals?: DetectedSignal[];
+  };
+  return parsed.signals ?? [];
+}
+
 /** Transcribes recorded audio via Whisper. Raw audio is not persisted here
  *  or by the caller — see docs/ARCHITECTURE.md §6.5 and the open question
  *  on audio retention in §8. */

@@ -4,11 +4,9 @@
  * are unencrypted since the list and Playback need to query on them.
  *
  * signal_count comes from a PostgREST embedded-resource count on
- * manifestation_signals — real data (0 for a fresh manifestation), not a
- * placeholder. Automatic signal *detection* — scanning new entries against
- * active manifestations — isn't built yet; see the note in
- * src/app/api/entries/route.ts POST for why that's a deliberate follow-up,
- * not an oversight.
+ * manifestation_signals — real data, populated by
+ * src/lib/hooks/useSignalDetector.ts after each entry save (client-side,
+ * transient plaintext — see src/app/api/ai/detect-signals/route.ts).
  */
 
 import { NextResponse } from "next/server";
