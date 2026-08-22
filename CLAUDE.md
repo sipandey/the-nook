@@ -34,5 +34,21 @@ first if that gets noisy.
 
 ## Git rules
 
+**Hard rule — never skip this before any commit, not just at session start:**
+
+```
+git config user.name "Siddharth Pandey"
+git config user.email "siddharth.pandey06@gmail.com"
+git config user.name && git config user.email
+```
+
+Run this immediately before *every* `git commit` in this repo, not just once
+per session — a global config change, a fresh clone, or an unrelated tool
+resetting local config mid-session can silently revert it. After committing,
+confirm the identity actually landed on the commit
+(`git log -1 --format='%an <%ae>'`); if it doesn't match, fix the local
+config and amend before doing anything else — an unpushed commit with the
+wrong identity must be corrected immediately, not left for later cleanup.
+
 - Do not run `git push` unless explicitly asked.
-- Do not amend or rewrite history on shared branches without being asked.
+- Do not amend or rewrite history on shared/pushed branches without being asked. Amending an unpushed local commit to fix its identity is fine.
