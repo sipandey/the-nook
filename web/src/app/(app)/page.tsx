@@ -1,16 +1,16 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import { HillsHero } from "@/components/HillsHero";
 import { BottomTabBar } from "@/components/BottomTabBar";
-import { useEntries } from "@/lib/hooks/useEntries";
+import { MoodDots } from "@/components/MoodDots";
+import { useEntries, type EntryMetadata } from "@/lib/hooks/useEntries";
 import { computeStreak } from "@/lib/streak";
 import { useSessionStore } from "@/lib/store/session";
-
-const MOOD_LABELS = ["Low", "", "", "", "High"];
+import { decryptText } from "@/lib/crypto";
 
 function useDailyPrompt() {
   return useQuery({
@@ -24,19 +24,49 @@ function useDailyPrompt() {
   });
 }
 
+/**
+ * Decrypts snippets client-side once the DEK is available. Home lives
+ * inside src/app/(app)/, which UnlockGate already guarantees means the DEK
+ * is in memory by the time this renders — so this always has a key, but it
+ * stays a no-op gracefully if that ever changes.
+ */
+function useDecryptedSnippets(entries: EntryMetadata[] | undefined, dek: CryptoKey | null) {
+  const [snippets, setSnippets] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!entries || !dek) return;
+    let cancelled = false;
+
+    Promise.all(
+      entries.map(async (e) => {
+        try {
+          const text = await decryptText({ ciphertext: e.encrypted_content, iv: e.iv }, dek);
+          return [e.id, text] as const;
+        } catch {
+          return [e.id, ""] as const;
+        }
+      }),
+    ).then((pairs) => {
+      if (!cancelled) setSnippets(Object.fromEntries(pairs));
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [entries, dek]);
+
+  return snippets;
+}
+
 function formatDay(iso: string): string {
-  return new Date(iso).toLocaleDateString(undefined, {
-    weekday: "short",
-    month: undefined,
-    day: undefined,
-  });
+  return new Date(iso).toLocaleDateString(undefined, { weekday: "short" });
 }
 
 export default function Home() {
   const { user } = useUser();
   const { data: entries, isLoading: entriesLoading } = useEntries();
   const { data: promptData, isLoading: promptLoading } = useDailyPrompt();
-  const isUnlocked = useSessionStore((s) => s.isUnlocked);
+  const dek = useSessionStore((s) => s.dek);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
 
   const streak = useMemo(
@@ -45,6 +75,7 @@ export default function Home() {
   );
 
   const recentEntries = useMemo(() => (entries ?? []).slice(0, 3), [entries]);
+  const snippets = useDecryptedSnippets(recentEntries, dek);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
@@ -90,26 +121,12 @@ export default function Home() {
             {promptLoading ? "Thinking of something to ask you…" : `"${promptData?.prompt}"`}
           </p>
 
-          <div className="mt-2.5 flex items-center justify-between">
-            <div className="flex gap-2.5">
-              {[1, 2, 3, 4, 5].map((value) => (
-                <button
-                  key={value}
-                  type="button"
-                  aria-label={`Mood ${value} of 5`}
-                  onClick={() => setSelectedMood(value)}
-                  className={`h-[22px] w-[22px] rounded-full border-[1.3px] transition-colors ${
-                    selectedMood === value
-                      ? "border-accent bg-accent"
-                      : "border-border bg-transparent"
-                  }`}
-                />
-              ))}
-            </div>
+          <div className="mt-2.5">
+            <MoodDots value={selectedMood} onChange={setSelectedMood} />
           </div>
           <div className="mt-1 flex justify-between text-[9px] text-faint">
-            <span>{MOOD_LABELS[0]}</span>
-            <span>{MOOD_LABELS[4]}</span>
+            <span>Low</span>
+            <span>High</span>
           </div>
         </div>
 
@@ -148,44 +165,30 @@ export default function Home() {
             </p>
           )}
 
-          {recentEntries.map((entry) => (
-            <Link
-              key={entry.id}
-              href={`/journal/${entry.id}`}
-              className="flex items-center gap-2.5 border-b border-divider py-2.5"
-            >
-              <span
-                className="h-[9px] w-[9px] flex-shrink-0 rounded-full"
-                style={{
-                  background:
-                    entry.mood_score && entry.mood_score >= 3 ? "#4f6b52" : "#c9c2ab",
-                }}
-              />
-              <span className="w-11 flex-shrink-0 text-[10px] text-faint">
-                {formatDay(entry.created_at)}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-xs">
-                {isUnlocked ? (
-                  "Decrypted preview goes here"
-                ) : (
-                  <span className="inline-flex items-center gap-1 italic text-faint">
-                    <svg
-                      viewBox="0 0 20 20"
-                      width="10"
-                      height="10"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="1.8"
-                    >
-                      <rect x="4.5" y="9" width="11" height="8" rx="1.5" />
-                      <path d="M6.5 9V6a3.5 3.5 0 0 1 7 0v3" />
-                    </svg>
-                    Unlock your journal to view
-                  </span>
-                )}
-              </span>
-            </Link>
-          ))}
+          {recentEntries.map((entry) => {
+            const snippet = snippets[entry.id];
+            return (
+              <Link
+                key={entry.id}
+                href={`/journal/${entry.id}`}
+                className="flex items-center gap-2.5 border-b border-divider py-2.5"
+              >
+                <span
+                  className="h-[9px] w-[9px] flex-shrink-0 rounded-full"
+                  style={{
+                    background:
+                      entry.mood_score && entry.mood_score >= 3 ? "#4f6b52" : "#c9c2ab",
+                  }}
+                />
+                <span className="w-11 flex-shrink-0 text-[10px] text-faint">
+                  {formatDay(entry.created_at)}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-xs">
+                  {snippet === undefined ? "…" : snippet || "(couldn't decrypt this entry)"}
+                </span>
+              </Link>
+            );
+          })}
         </div>
       </main>
 
