@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { PREVIEW_MODE, getPreviewEntries } from "@/lib/preview";
 
 export interface EntryMetadata {
   id: string;
@@ -24,6 +25,7 @@ export function useEntries() {
   return useQuery({
     queryKey: ["entries"],
     queryFn: async (): Promise<EntryMetadata[]> => {
+      if (PREVIEW_MODE) return getPreviewEntries();
       const res = await fetch("/api/entries");
       if (!res.ok) throw new Error("Failed to load entries");
       return res.json();

@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import type { WrappedKeyMaterial } from "@/lib/crypto";
+import { PREVIEW_MODE, getPreviewKeyMaterial } from "@/lib/preview";
 
 /** Shape of a journal_keys row as returned by GET /api/keys — snake_case,
  *  matching the Postgres columns directly (see 0001_init.sql / 0002). */
@@ -42,6 +43,7 @@ export function useKeyMaterial() {
   return useQuery({
     queryKey: ["keyMaterial"],
     queryFn: async (): Promise<KeyMaterialRow | null> => {
+      if (PREVIEW_MODE) return getPreviewKeyMaterial();
       const res = await fetch("/api/keys");
       if (res.status === 404) return null;
       if (!res.ok) throw new Error("Failed to load key material");

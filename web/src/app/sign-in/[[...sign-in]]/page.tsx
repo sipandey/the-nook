@@ -8,13 +8,11 @@
  */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSignIn } from "@clerk/nextjs";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 export default function SignInPage() {
   const { signIn } = useSignIn();
-  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -47,7 +45,12 @@ export default function SignInPage() {
       }
       if (signIn.status === "complete") {
         await signIn.finalize();
-        router.push("/");
+        // Hard navigation, not router.push(): the Next.js router cache can
+        // still be holding the pre-auth (redirect-to-sign-in) response for
+        // "/" from before this session existed, which would bounce us
+        // straight back here — a full page load forces a fresh request
+        // with the new session cookie instead of serving that stale entry.
+        window.location.href = "/";
       } else {
         setError("Something's still missing on our end — try again.");
       }

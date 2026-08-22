@@ -12,6 +12,7 @@ import { computeStreak } from "@/lib/streak";
 import { useSessionStore } from "@/lib/store/session";
 import { useTone } from "@/lib/hooks/useTone";
 import type { Tone } from "@/lib/tone";
+import { PREVIEW_MODE, getPreviewDailyPrompt } from "@/lib/preview";
 
 const MOOD_OPTIONS: { value: number; color: string; label: string }[] = [
   { value: 1, color: "bg-mood-rose", label: "Struggling" },
@@ -25,6 +26,7 @@ function useDailyPrompt(tone: Tone) {
   return useQuery({
     queryKey: ["ai", "prompt", tone, new Date().toISOString().slice(0, 10)],
     queryFn: async (): Promise<{ prompt: string; tone: string }> => {
+      if (PREVIEW_MODE) return getPreviewDailyPrompt();
       const res = await fetch(`/api/ai/prompt?tone=${tone}`);
       if (!res.ok) throw new Error("Failed to load prompt");
       return res.json();

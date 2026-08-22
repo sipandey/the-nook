@@ -1,6 +1,7 @@
 "use client";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { PREVIEW_MODE, getPreviewNotificationPrefs } from "@/lib/preview";
 
 export interface NotificationPrefs {
   daily_prompt_enabled: boolean;
@@ -13,6 +14,7 @@ export function useNotificationPrefs() {
   return useQuery({
     queryKey: ["notificationPrefs"],
     queryFn: async (): Promise<NotificationPrefs> => {
+      if (PREVIEW_MODE) return getPreviewNotificationPrefs();
       const res = await fetch("/api/notification-prefs");
       if (!res.ok) throw new Error("Failed to load notification preferences");
       return res.json();

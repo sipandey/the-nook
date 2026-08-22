@@ -1,9 +1,10 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSessionStore } from "@/lib/store/session";
 import { useKeyMaterial } from "@/lib/hooks/useKeyMaterial";
+import { PREVIEW_MODE, getPreviewDek } from "@/lib/preview";
 import { PassphraseSetup } from "./PassphraseSetup";
 import { PassphraseUnlock } from "./PassphraseUnlock";
 
@@ -16,9 +17,24 @@ import { PassphraseUnlock } from "./PassphraseUnlock";
 export function UnlockGate({ children }: { children: ReactNode }) {
   const { isLoaded: clerkLoaded } = useUser();
   const isUnlocked = useSessionStore((s) => s.isUnlocked);
+  const unlock = useSessionStore((s) => s.unlock);
   const { data: keyMaterial, isLoading: keysLoading, error } = useKeyMaterial();
 
+  useEffect(() => {
+    if (PREVIEW_MODE && !isUnlocked) {
+      getPreviewDek().then(unlock);
+    }
+  }, [isUnlocked, unlock]);
+
   if (isUnlocked) return <>{children}</>;
+
+  if (PREVIEW_MODE) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center bg-background">
+        <p className="text-sm text-muted">Loading preview…</p>
+      </div>
+    );
+  }
 
   if (!clerkLoaded || keysLoading) {
     return (

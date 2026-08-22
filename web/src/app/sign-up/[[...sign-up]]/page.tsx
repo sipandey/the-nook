@@ -1,12 +1,9 @@
 "use client";
 
 /**
- * Custom-styled signup — not Clerk's prebuilt <SignUp/> component (that's
- * still what src/app/sign-in/ uses; this is intentionally the one screen
- * that got the "editorial" visual treatment, per the pasted mockup). Built
- * on Clerk's useSignUp hook so it's a real flow, not a facade: email/
- * password + OAuth, and an email verification-code step that isn't in the
- * mockup but that Clerk requires by default — skipping it would make this
+ * Custom-styled signup, built on Clerk's useSignUp hook so it's a real
+ * flow, not a facade: email/password + OAuth, and an email verification-
+ * code step that Clerk requires by default — skipping it would make this
  * screen non-functional.
  *
  * Uses Clerk's newer "Future" resource API (signUp.password(), .sso(),
@@ -16,13 +13,11 @@
  */
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSignUp } from "@clerk/nextjs";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
 export default function SignUpPage() {
   const { signUp } = useSignUp();
-  const router = useRouter();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,7 +29,10 @@ export default function SignUpPage() {
   async function finalizeIfComplete() {
     if (signUp.status === "complete") {
       await signUp.finalize();
-      router.push("/");
+      // Hard navigation, not router.push(): see the matching comment in
+      // sign-in/page.tsx — the Next.js router cache can serve a stale
+      // pre-auth response for "/" and bounce straight back to sign-in.
+      window.location.href = "/";
       return true;
     }
     return false;

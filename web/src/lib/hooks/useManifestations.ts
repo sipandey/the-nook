@@ -4,6 +4,7 @@ import { useMemo } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { encryptText } from "@/lib/crypto";
 import { useDecryptedMap } from "@/lib/hooks/useDecryptedMap";
+import { PREVIEW_MODE, getPreviewManifestations } from "@/lib/preview";
 
 export type Cadence = "weekly" | "monthly" | "ai_decides";
 
@@ -23,6 +24,7 @@ export function useManifestations() {
   return useQuery({
     queryKey: ["manifestations"],
     queryFn: async (): Promise<ManifestationRow[]> => {
+      if (PREVIEW_MODE) return getPreviewManifestations();
       const res = await fetch("/api/manifestations");
       if (!res.ok) throw new Error("Failed to load manifestations");
       return res.json();
