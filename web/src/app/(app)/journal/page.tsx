@@ -2,11 +2,19 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { HillsHero } from "@/components/HillsHero";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { MaterialIcon } from "@/components/MaterialIcon";
 import { useEntries } from "@/lib/hooks/useEntries";
 import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { useSessionStore } from "@/lib/store/session";
+
+const MOOD_LABEL: Record<number, string> = {
+  1: "Struggling",
+  2: "Low",
+  3: "Steady",
+  4: "Good",
+  5: "Great",
+};
 
 function monthLabel(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "long", year: "numeric" });
@@ -40,73 +48,108 @@ export default function JournalPage() {
     return Array.from(byMonth.entries());
   }, [filtered]);
 
+  const hasAnyEntries = (entries ?? []).length > 0;
+
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <HillsHero height={52} sunSide="right" />
+    <div className="font-editorial-sans mx-auto flex min-h-screen w-full max-w-md flex-col bg-background text-on-background pb-24">
+      <header className="flex justify-between items-center w-full px-container-padding py-4 sticky top-0 z-40 bg-background">
+        <span className="w-10" />
+        <h1 className="font-editorial-display text-headline-lg-mobile text-primary tracking-tight">The Nook</h1>
+        <Link href="/settings" aria-label="Settings" className="text-outline">
+          <MaterialIcon name="settings" size={20} />
+        </Link>
+      </header>
 
-      <div className="flex flex-shrink-0 flex-col gap-2.5 px-4 pt-3 pb-2">
-        <h1 className="text-[17px] font-bold">Journal</h1>
-        <div className="flex items-center gap-2 rounded-full border-[1.2px] border-border bg-surface px-3 py-1.5">
-          <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" className="text-faint">
-            <circle cx="9" cy="9" r="6" />
-            <path d="M13.5 13.5L18 18" />
-          </svg>
-          <input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search entries or tags"
-            className="w-full border-none bg-transparent text-xs outline-none placeholder:text-faint"
-          />
-        </div>
-      </div>
-
-      <main className="flex-1 px-4 pb-3">
-        {isLoading && <p className="pt-2 text-xs text-muted">Loading…</p>}
-
-        {!isLoading && filtered.length === 0 && (
-          <p className="pt-2 text-xs text-muted">
-            {query ? "No entries match that search." : "Nothing here yet."}
-          </p>
-        )}
-
-        {groups.map(([month, monthEntries]) => (
-          <div key={month}>
-            <div className="mt-2.5 mb-1.5 text-[11px] uppercase tracking-wide text-faint">
-              {month}
+      <main className="flex-grow px-container-padding pt-2 max-w-3xl mx-auto w-full">
+        {!isLoading && !hasAnyEntries ? (
+          <div className="flex-grow flex flex-col items-center justify-center pt-16 gap-stack-gap text-center">
+            <div className="w-40 h-40 rounded-full bg-surface-container flex items-center justify-center">
+              <MaterialIcon name="menu_book" size={48} className="text-outline-variant" />
             </div>
-            {monthEntries.map((entry) => {
-              const date = new Date(entry.created_at);
-              const snippet = decrypted[entry.id];
-              return (
-                <Link
-                  key={entry.id}
-                  href={`/journal/${entry.id}`}
-                  className="flex items-center gap-3 border-b border-divider py-2.5"
-                >
-                  <div className="w-9 flex-shrink-0 text-center">
-                    <div className="text-[15px] font-bold leading-none">{date.getDate()}</div>
-                    <div className="mt-0.5 text-[9px] text-faint">
-                      {date.toLocaleDateString(undefined, { weekday: "short" })}
-                    </div>
-                  </div>
-                  <span
-                    className="h-2 w-2 flex-shrink-0 rounded-full"
-                    style={{
-                      background:
-                        entry.mood_score && entry.mood_score >= 3 ? "#4f6b52" : "#c9c2ab",
-                    }}
-                  />
-                  <span className="min-w-0 flex-1 truncate text-xs">
-                    {snippet === undefined ? "…" : snippet || "(couldn't decrypt this entry)"}
-                  </span>
-                  <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6" className="flex-shrink-0 text-faint">
-                    <path d="M7.5 4.5L13.5 10l-6 5.5" />
-                  </svg>
-                </Link>
-              );
-            })}
+            <div className="flex flex-col items-center gap-2 max-w-[280px]">
+              <h2 className="font-editorial-display text-headline-md text-on-background">No thoughts captured yet</h2>
+              <p className="text-body-lg text-outline">
+                Your mind is a blank canvas. Take a deep breath and start your first reflection.
+              </p>
+            </div>
+            <Link
+              href="/write"
+              className="bg-primary text-on-primary text-label-sm px-8 py-4 rounded-full flex items-center gap-2 hover:bg-surface-tint active:scale-95 transition-all shadow-[0_4px_14px_0_rgba(74,101,78,0.15)]"
+            >
+              <MaterialIcon name="edit_document" size={18} />
+              Start your first entry
+            </Link>
           </div>
-        ))}
+        ) : (
+          <>
+            <div className="mb-stack-gap">
+              <div className="relative flex items-center w-full h-12 rounded-full bg-surface-container-low border border-outline-variant/30 focus-within:border-primary/50 focus-within:bg-surface transition-colors overflow-hidden">
+                <div className="grid place-items-center h-full w-12 text-outline">
+                  <MaterialIcon name="search" size={20} />
+                </div>
+                <input
+                  value={query}
+                  onChange={(e) => setQuery(e.target.value)}
+                  placeholder="Search your entries…"
+                  className="peer h-full w-full outline-none text-body-md text-on-surface bg-transparent pr-4 placeholder:text-outline-variant"
+                />
+              </div>
+            </div>
+
+            {isLoading && <p className="text-sm text-on-surface-variant">Loading…</p>}
+
+            {!isLoading && filtered.length === 0 && (
+              <div className="flex flex-col items-center gap-2 pt-8 text-center">
+                <MaterialIcon name="search_off" size={28} className="text-outline mb-1" />
+                <h2 className="font-editorial-display text-headline-md text-on-background">No matches</h2>
+                <p className="text-body-md text-on-surface-variant">
+                  Nothing matches &ldquo;{query}&rdquo;. Try a different word or tag.
+                </p>
+              </div>
+            )}
+
+            {groups.map(([month, monthEntries]) => (
+              <section key={month} className="mb-stack-gap">
+                <h2 className="font-editorial-display text-headline-md text-primary mb-inline-gap border-b border-surface-container-highest pb-2">
+                  {month}
+                </h2>
+                <div className="flex flex-col gap-inline-gap">
+                  {monthEntries.map((entry) => {
+                    const date = new Date(entry.created_at);
+                    const snippet = decrypted[entry.id];
+                    const moodLabel = entry.mood_score ? MOOD_LABEL[entry.mood_score] : null;
+                    return (
+                      <Link
+                        key={entry.id}
+                        href={`/journal/${entry.id}`}
+                        className="block p-6 rounded-xl bg-surface-container-low border border-transparent transition-all hover:shadow-[0_4px_20px_-4px_rgba(74,101,78,0.1)] hover:border-surface-variant"
+                      >
+                        <div className="flex justify-between items-start mb-2">
+                          <time className="text-label-sm text-outline">
+                            {date.toLocaleDateString(undefined, { month: "short", day: "numeric" })}
+                          </time>
+                          {moodLabel && (
+                            <span className="inline-flex items-center px-3 py-1 rounded-full bg-surface-container-high text-primary text-[11px] tracking-wider uppercase">
+                              {moodLabel}
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-body-lg text-on-surface-variant line-clamp-3 leading-relaxed">
+                          {snippet === undefined ? "…" : snippet || "(couldn't decrypt this entry)"}
+                        </p>
+                      </Link>
+                    );
+                  })}
+                </div>
+              </section>
+            ))}
+
+            <div className="flex justify-center items-center gap-2 mt-stack-gap text-outline opacity-60">
+              <MaterialIcon name="lock" size={16} />
+              <span className="text-label-sm">End-to-End Encrypted</span>
+            </div>
+          </>
+        )}
       </main>
 
       <BottomTabBar />
