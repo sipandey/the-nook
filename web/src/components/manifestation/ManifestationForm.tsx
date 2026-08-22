@@ -136,7 +136,7 @@ export function ManifestationForm({
                 placeholder="What are you calling in?"
                 autoFocus
                 rows={4}
-                className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 text-display-lg-mobile font-editorial-display text-on-background placeholder:text-outline resize-none p-0 pb-2 transition-colors"
+                className="w-full bg-transparent border-0 border-b border-outline-variant focus:border-primary focus:ring-0 focus:outline-none text-display-lg-mobile font-editorial-display text-on-background placeholder:text-outline resize-none p-3 transition-colors"
               />
               <div className="text-right text-label-sm text-outline">{text.length} / 200</div>
             </section>
