@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { HillsHero } from "@/components/HillsHero";
 import { BottomTabBar } from "@/components/BottomTabBar";
+import { MaterialIcon } from "@/components/MaterialIcon";
 import { useManifestations, useDecryptedManifestations } from "@/lib/hooks/useManifestations";
 import { useSessionStore } from "@/lib/store/session";
 
@@ -13,78 +13,133 @@ export default function ManifestationsPage() {
 
   const active = (manifestations ?? []).filter((m) => m.status === "active");
 
-  return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <HillsHero height={52} sunSide="center" />
+  if (!isLoading && active.length === 0) {
+    return (
+      <div className="font-editorial-sans min-h-screen flex flex-col relative pb-[90px] md:pb-0 bg-background text-on-background">
+        <header className="w-full top-0 sticky bg-background flex justify-between items-center px-container-padding h-16 z-40">
+          <span className="w-10" />
+          <h1 className="text-headline-md font-editorial-display text-primary tracking-tight">The Nook</h1>
+          <Link href="/settings" aria-label="Settings" className="text-on-surface-variant">
+            <MaterialIcon name="settings" />
+          </Link>
+        </header>
 
-      <div className="flex flex-shrink-0 items-center justify-between px-4 pt-4 pb-2">
-        <h1 className="text-[17px] font-bold">Manifestations</h1>
-        <Link
-          href="/manifestations/new"
-          aria-label="New manifestation"
-          className="flex h-8 w-8 items-center justify-center rounded-[8px] border-[1.3px] border-border"
-        >
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <path d="M10 4v12M4 10h12" />
-          </svg>
-        </Link>
-      </div>
-
-      <main className="flex flex-1 flex-col gap-2.5 px-4 pb-3">
-        {isLoading && <p className="text-xs text-muted">Loading…</p>}
-
-        {!isLoading && active.length === 0 && (
-          <div className="mt-2 flex flex-col items-center gap-2 rounded-xl border border-dashed border-border p-6 text-center">
-            <p className="text-xs text-muted">
-              Write down something you&rsquo;re working toward — we&rsquo;ll
-              resurface it when it seems relevant.
-            </p>
-            <Link href="/manifestations/new" className="text-xs font-semibold text-accent">
-              Add your first one
-            </Link>
+        <main className="flex-grow flex flex-col items-center justify-center px-container-padding py-stack-gap mb-24 max-w-lg mx-auto w-full relative">
+          <div className="w-full aspect-square mb-stack-gap relative rounded-[40px] overflow-hidden bg-surface-container-low shadow-[inset_0_0_100px_rgba(242,239,233,0.5)]">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static decorative asset */}
+            <img src="/images/hero-dawn.jpg" alt="" className="w-full h-full object-cover opacity-90 mix-blend-multiply" aria-hidden="true" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent opacity-80" />
           </div>
-        )}
 
-        {active.map((m) => {
-          const text = decrypted[m.id];
-          const signalCount = m.manifestation_signals?.[0]?.count ?? 0;
-          return (
-            <Link
-              key={m.id}
-              href={`/manifestations/${m.id}`}
-              className="rounded-[10px] border-[1.3px] border-border bg-surface p-3"
-            >
-              <div className="text-[13px] font-semibold leading-snug">
-                {text === undefined ? "…" : text || "(couldn't decrypt)"}
-              </div>
-              <div className="mt-2 flex items-center gap-2">
-                {m.category && (
-                  <span className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted">
-                    {m.category}
-                  </span>
-                )}
-                <span className="text-[10px] text-faint">
-                  Written {new Date(m.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric" })}
-                </span>
-              </div>
-              <div className="mt-2 flex items-center gap-1.5 text-[10px] text-accent">
-                {signalCount > 0 ? (
-                  <>
-                    <div className="flex gap-[3px]">
-                      {Array.from({ length: Math.min(signalCount, 5) }).map((_, i) => (
-                        <span key={i} className="h-1.5 w-1.5 rounded-full bg-accent" />
-                      ))}
+          <div className="text-center flex flex-col gap-inline-gap mb-stack-gap max-w-md mx-auto relative z-10">
+            <h2 className="font-editorial-display text-headline-lg-mobile text-on-background">A Vision to Weave</h2>
+            <p className="text-body-lg text-on-surface-variant leading-relaxed">
+              Manifestations are intentions you set for yourself. As you journal, our AI softly
+              detects moments where your reality matches your intent.
+            </p>
+          </div>
+
+          <Link
+            href="/manifestations/new"
+            className="w-full max-w-sm text-center bg-primary text-on-primary rounded-full py-4 px-8 text-label-sm uppercase tracking-widest hover:bg-on-primary-fixed-variant transition-colors shadow-[0_4px_20px_rgba(74,101,78,0.15)]"
+          >
+            Set Your First Intention
+          </Link>
+
+          <div className="mt-8 flex items-center gap-2 text-on-surface-variant opacity-70">
+            <MaterialIcon name="lock" size={14} />
+            <span className="text-label-sm">End-to-End Encrypted</span>
+          </div>
+        </main>
+
+        <BottomTabBar />
+      </div>
+    );
+  }
+
+  return (
+    <div className="font-editorial-sans min-h-screen flex flex-col relative pb-[90px] md:pb-0 bg-background text-on-background">
+      <header className="w-full top-0 sticky bg-background flex justify-between items-center px-container-padding h-16 z-40">
+        <span className="w-10" />
+        <h1 className="text-headline-md font-editorial-display text-primary tracking-tight">The Nook</h1>
+        <Link href="/settings" aria-label="Settings" className="text-on-surface-variant">
+          <MaterialIcon name="settings" />
+        </Link>
+      </header>
+
+      <main className="flex-grow px-container-padding pt-6 pb-32">
+        <section className="mb-stack-gap text-center md:text-left">
+          <h1 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-primary mb-2">
+            Manifestations
+          </h1>
+          <p className="text-body-lg text-outline italic">Your intentions, coming to light.</p>
+        </section>
+
+        {isLoading && <p className="text-sm text-on-surface-variant">Loading…</p>}
+
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {active.map((m) => {
+            const text = decrypted[m.id];
+            const signalCount = m.manifestation_signals?.[0]?.count ?? 0;
+            const hasSignals = signalCount > 0;
+            return (
+              <Link
+                key={m.id}
+                href={`/manifestations/${m.id}`}
+                className={`rounded-xl p-6 flex flex-col h-full transition-colors group ${
+                  hasSignals
+                    ? "bg-surface-container hover:bg-surface-container-high"
+                    : "bg-surface-container-low hover:bg-surface-container border border-outline-variant/30"
+                }`}
+              >
+                <div className="flex justify-between items-start mb-4">
+                  {m.category && (
+                    <div
+                      className={`text-label-sm px-3 py-1 rounded-full uppercase tracking-wider ${
+                        hasSignals
+                          ? "bg-surface-variant text-on-surface-variant"
+                          : "bg-surface-variant/50 text-on-surface-variant/70"
+                      }`}
+                    >
+                      {m.category}
                     </div>
-                    {signalCount} {signalCount === 1 ? "entry shows" : "entries show"} this happening
-                  </>
-                ) : (
-                  <span className="text-faint">No signals detected yet</span>
-                )}
-              </div>
-            </Link>
-          );
-        })}
+                  )}
+                  {hasSignals && (
+                    <MaterialIcon
+                      name="arrow_forward"
+                      className="text-primary opacity-0 group-hover:opacity-100 transition-opacity"
+                    />
+                  )}
+                </div>
+                <h2 className={`text-headline-md font-editorial-display mb-auto pb-6 ${hasSignals ? "text-on-surface" : "text-on-surface/80"}`}>
+                  {text === undefined ? "…" : text || "(couldn't decrypt)"}
+                </h2>
+                <div className={`flex items-center mt-4 pt-4 border-t ${hasSignals ? "text-primary border-surface-dim" : "text-outline border-surface-dim/50"}`}>
+                  <MaterialIcon name={hasSignals ? "trending_up" : "hourglass_empty"} size={16} className={`mr-2 ${hasSignals ? "" : "opacity-50"}`} />
+                  <p className={`text-sm ${hasSignals ? "font-medium" : "italic"}`}>
+                    {hasSignals
+                      ? `${signalCount} ${signalCount === 1 ? "entry shows" : "entries show"} this happening`
+                      : "No signals yet"}
+                  </p>
+                </div>
+              </Link>
+            );
+          })}
+        </section>
+
+        <div className="mt-stack-gap text-center flex items-center justify-center text-outline">
+          <MaterialIcon name="lock" size={16} className="mr-1" />
+          <span className="text-label-sm">End-to-End Encrypted</span>
+        </div>
       </main>
+
+      <Link
+        href="/manifestations/new"
+        aria-label="Add new manifestation"
+        className="fixed bottom-24 right-6 bg-primary text-on-primary w-14 h-14 rounded-xl flex items-center justify-center shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all z-40"
+      >
+        <MaterialIcon name="add" size={26} />
+      </Link>
 
       <BottomTabBar />
     </div>
