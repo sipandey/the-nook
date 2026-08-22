@@ -273,7 +273,7 @@ function StoryContent() {
           </section>
         </main>
 
-        <div className="absolute inset-0 w-full h-full z-50 flex pointer-events-none">
+        <div className="absolute inset-0 w-full h-full z-0 flex pointer-events-none">
           <button type="button" onClick={prev} aria-label="Previous" className="w-1/3 h-full pointer-events-auto" />
           <button type="button" onClick={next} aria-label="Next" className="w-2/3 h-full pointer-events-auto" />
         </div>
@@ -321,7 +321,7 @@ function StoryContent() {
           </Link>
         </div>
 
-        <div className="absolute inset-0 w-full h-full z-30 flex pointer-events-none">
+        <div className="absolute inset-0 w-full h-full z-0 flex pointer-events-none">
           <button type="button" onClick={prev} aria-label="Previous" className="w-1/3 h-full pointer-events-auto" />
           <button type="button" onClick={next} aria-label="Next" className="w-2/3 h-full pointer-events-auto" />
         </div>
@@ -419,7 +419,7 @@ function StoryContent() {
             {card.entryId && (
               <Link
                 href={`/journal/${card.entryId}`}
-                className="flex items-center gap-2 text-body-md text-surface-dim hover:text-surface-bright transition-colors"
+                className="relative z-10 flex items-center gap-2 text-body-md text-surface-dim hover:text-surface-bright transition-colors"
               >
                 Read full entry
                 <MaterialIcon name="arrow_forward" size={18} />
