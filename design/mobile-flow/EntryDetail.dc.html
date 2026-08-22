@@ -1,0 +1,75 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px; border-bottom: 1px solid #ece8db; flex-shrink: 0; }
+    .icon-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+    .topbar-date { font-size: 12px; font-weight: 600; color: #7a7568; }
+    .content { flex: 1; overflow: hidden; padding: 20px 18px; display: flex; flex-direction: column; gap: 14px; }
+    .full-date { font-size: 19px; font-weight: 700; }
+    .meta-row { display: flex; align-items: center; gap: 8px; }
+    .mood-chip { display: flex; align-items: center; gap: 4px; font-size: 10px; color: #4f6b52; border: 1px solid #4f6b52; border-radius: 999px; padding: 3px 9px; }
+    .tag-chip { font-size: 10px; color: #7a7568; border: 1px solid #ded8c6; border-radius: 999px; padding: 3px 9px; }
+    .body-text { font-family: Georgia, 'Times New Roman', serif; font-size: 14.5px; line-height: 1.75; color: #33362f; }
+    .body-text p { margin: 0 0 14px; }
+    .memory-note { border-top: 1px dashed #ded8c6; padding-top: 12px; margin-top: 4px; display: flex; align-items: flex-start; gap: 8px; }
+    .memory-note svg { flex-shrink: 0; margin-top: 2px; color: #7a7568; }
+    .memory-text { font-size: 11px; color: #7a7568; line-height: 1.4; }
+    .memory-text b { color: #33362f; }
+    .mini-hero { height: 36px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 36" width="300" height="36" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="36" fill="url(#mh)"/>
+      <path d="M0,18 C50,24 90,14 150,20 C210,26 250,16 300,22 L300,36 L0,36 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,28 C60,32 120,24 180,30 C230,34 270,26 300,30 L300,36 L0,36 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="icon-btn"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12.5 4.5L6.5 10l6 5.5"/></svg></div>
+    <div class="topbar-date">Fri, Aug 21</div>
+    <div class="icon-btn"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="4" cy="10" r="0.6"/><circle cx="10" cy="10" r="0.6"/><circle cx="16" cy="10" r="0.6"/></svg></div>
+  </div>
+  <div class="content">
+    <div>
+      <div class="full-date">Friday, August 21</div>
+      <div class="meta-row" style="margin-top:8px;">
+        <div class="mood-chip">
+          <svg viewBox="0 0 20 20" width="10" height="10" fill="currentColor"><circle cx="10" cy="10" r="8"/></svg>
+          Steady
+        </div>
+        <div class="tag-chip">work</div>
+        <div class="tag-chip">growth</div>
+      </div>
+    </div>
+    <div class="body-text">
+      <p>Felt steadier walking into the review than I expected. Kept thinking back to how much I used to spiral before these &mdash; rehearsing every possible question, barely sleeping the night before. This time I just&hellip; showed up.</p>
+      <p>Halfway through, someone pushed back on the timeline and I noticed myself explaining instead of apologizing. Small thing, but it landed differently. Genuinely proud of how the team pulled the launch together this week too &mdash; feels like the first time in a while I closed a week without replaying every conversation on the drive home.</p>
+      <p>Want to remember this one. Not because anything huge happened, just because it was quiet, and I didn't need it to be more than that.</p>
+    </div>
+    <div class="memory-note">
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7.5"/><path d="M10 6v4l3 2"/></svg>
+      <div class="memory-text"><b>One year ago today</b> you wrote about dreading this same kind of review. Worth a look.</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

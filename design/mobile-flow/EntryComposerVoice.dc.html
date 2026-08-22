@@ -1,0 +1,120 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px; border-bottom: 1px solid #ece8db; flex-shrink: 0; }
+    .topbar-date { font-size: 12px; font-weight: 600; color: #7a7568; }
+    .icon-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+
+    .rec-status { display: flex; align-items: center; justify-content: center; gap: 6px; padding: 14px 0 4px; flex-shrink: 0; }
+    .rec-dot { width: 8px; height: 8px; border-radius: 50%; background: #b3543f; }
+    .rec-label { font-size: 11px; font-weight: 600; color: #b3543f; letter-spacing: .03em; }
+
+    .visual-area { flex-shrink: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 18px 0 14px; gap: 10px; }
+    .waveform { display: flex; align-items: center; gap: 3px; height: 56px; }
+    .bar { width: 4px; border-radius: 2px; background: #4f6b52; }
+    .timer { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 26px; font-weight: 600; letter-spacing: .02em; }
+
+    .transcript-wrap { flex: 1; overflow: hidden; padding: 0 20px 14px; display: flex; flex-direction: column; }
+    .transcript-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7a7568; margin-bottom: 6px; }
+    .transcript-box { border: 1.3px dashed #ded8c6; border-radius: 10px; padding: 12px; background: #fff; flex: 1; }
+    .transcript-text { font-size: 13px; line-height: 1.6; color: #33362f; }
+    .transcript-text .fading { color: #b3ab97; }
+    .cursor-blink { display: inline-block; width: 1.5px; height: 13px; background: #4f6b52; vertical-align: middle; margin-left: 2px; }
+
+    .controls-row { display: flex; align-items: center; justify-content: center; gap: 28px; padding: 10px 20px 26px; flex-shrink: 0; }
+    .ctrl { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+    .ctrl-btn { width: 46px; height: 46px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+    .ctrl-btn.cancel { border: 1.3px solid #ded8c6; background: #fff; color: #33362f; }
+    .ctrl-btn.stop { width: 62px; height: 62px; background: #4f6b52; color: #fff; }
+    .ctrl-btn.pause { border: 1.3px solid #ded8c6; background: #fff; color: #33362f; }
+    .ctrl-label { font-size: 9px; color: #7a7568; }
+    .mini-hero { height: 40px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 40" width="300" height="40" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="40" fill="url(#mh)"/>
+      <path d="M0,20 C50,26 90,16 150,22 C210,28 250,18 300,24 L300,40 L0,40 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,30 C60,34 120,26 180,32 C230,36 270,28 300,32 L300,40 L0,40 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="icon-btn"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12.5 4.5L6.5 10l6 5.5"/></svg></div>
+    <div class="topbar-date">Friday, August 21</div>
+    <div class="icon-btn" style="opacity:0;"></div>
+  </div>
+
+  <div class="rec-status">
+    <div class="rec-dot"></div>
+    <div class="rec-label">RECORDING</div>
+  </div>
+
+  <div class="visual-area">
+    <div class="waveform">
+      <div class="bar" style="height:14px;"></div>
+      <div class="bar" style="height:24px;"></div>
+      <div class="bar" style="height:38px;"></div>
+      <div class="bar" style="height:20px;"></div>
+      <div class="bar" style="height:48px;"></div>
+      <div class="bar" style="height:30px;"></div>
+      <div class="bar" style="height:52px;"></div>
+      <div class="bar" style="height:22px;"></div>
+      <div class="bar" style="height:40px;"></div>
+      <div class="bar" style="height:16px;"></div>
+      <div class="bar" style="height:34px;"></div>
+      <div class="bar" style="height:46px;"></div>
+      <div class="bar" style="height:20px;"></div>
+      <div class="bar" style="height:28px;"></div>
+      <div class="bar" style="height:12px;"></div>
+    </div>
+    <div class="timer">0:42</div>
+  </div>
+
+  <div class="transcript-wrap">
+    <div class="transcript-label">Live transcript</div>
+    <div class="transcript-box">
+      <div class="transcript-text">Felt steadier walking into the review than I expected. Kept thinking back to how much I <span class="fading">used to spiral before these&hellip;</span><span class="cursor-blink"></span></div>
+    </div>
+  </div>
+
+  <div class="controls-row">
+    <div class="ctrl">
+      <div class="ctrl-btn cancel">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4.5 4.5l11 11M15.5 4.5l-11 11"/></svg>
+      </div>
+      <div class="ctrl-label">Cancel</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-btn stop">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor"><rect x="6" y="6" width="8" height="8" rx="1.5"/></svg>
+      </div>
+      <div class="ctrl-label">Done</div>
+    </div>
+    <div class="ctrl">
+      <div class="ctrl-btn pause">
+        <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="6" y="4.5" width="2.6" height="11" rx="1"/><rect x="11.4" y="4.5" width="2.6" height="11" rx="1"/></svg>
+      </div>
+      <div class="ctrl-label">Pause</div>
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

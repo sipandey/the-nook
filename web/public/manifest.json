@@ -1,0 +1,10 @@
+{
+  "name": "The Nook",
+  "short_name": "The Nook",
+  "description": "A quiet place to write, reflect, and watch yourself grow.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f6f4ee",
+  "theme_color": "#4f6b52",
+  "icons": []
+}

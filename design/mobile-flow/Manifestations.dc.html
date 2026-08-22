@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 12px; flex-shrink: 0; }
+    .title { font-size: 17px; font-weight: 700; }
+    .add-btn { width: 30px; height: 30px; border-radius: 8px; border: 1.3px solid #ded8c6; display: flex; align-items: center; justify-content: center; }
+    .content { flex: 1; overflow: hidden; padding: 0 16px 12px; display: flex; flex-direction: column; gap: 10px; }
+    .card { border: 1.3px solid #ded8c6; border-radius: 10px; padding: 12px; background: #fff; }
+    .card-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+    .goal-text { font-size: 13px; font-weight: 600; line-height: 1.35; }
+    .badge { font-size: 9px; background: #e4ead9; color: #4f6b52; border: 1px solid #4f6b52; border-radius: 999px; padding: 2px 7px; flex-shrink: 0; white-space: nowrap; }
+    .meta-row { display: flex; align-items: center; gap: 8px; margin-top: 8px; }
+    .tag-chip { font-size: 10px; color: #7a7568; border: 1px solid #ded8c6; border-radius: 999px; padding: 2px 8px; }
+    .date-text { font-size: 10px; color: #7a7568; }
+    .signal-row { display: flex; align-items: center; gap: 6px; margin-top: 8px; font-size: 10px; color: #4f6b52; }
+    .signal-dots { display: flex; gap: 3px; }
+    .signal-dot { width: 6px; height: 6px; border-radius: 50%; background: #4f6b52; }
+    .tabbar { display: flex; justify-content: space-around; align-items: center; height: 58px; border-top: 1.3px solid #ded8c6; background: #f6f4ee; flex-shrink: 0; }
+    .tabitem { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #7a7568; }
+    .tabitem.active { color: #4f6b52; }
+    .mini-hero { height: 52px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 52" width="300" height="52" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="52" fill="url(#mh)"/>
+      <circle cx="150" cy="10" r="9" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,30 C60,20 120,36 180,26 C220,20 260,32 300,26 L300,52 L0,52 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,42 C70,34 140,46 210,38 C245,34 275,44 300,40 L300,52 L0,52 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="title">Manifestations</div>
+    <div class="add-btn"><svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 4v12M4 10h12"/></svg></div>
+  </div>
+  <div class="content">
+    <div class="card">
+      <div class="card-top">
+        <div class="goal-text">Feel confident presenting to leadership</div>
+        <div class="badge">Resurfaced</div>
+      </div>
+      <div class="meta-row">
+        <div class="tag-chip">Career</div>
+        <div class="date-text">Written Mar 3</div>
+      </div>
+      <div class="signal-row">
+        <div class="signal-dots"><div class="signal-dot"></div><div class="signal-dot"></div><div class="signal-dot"></div></div>
+        3 entries show this happening
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="goal-text">Build a consistent morning routine</div>
+      </div>
+      <div class="meta-row">
+        <div class="tag-chip">Habits</div>
+        <div class="date-text">Written Jun 14</div>
+      </div>
+      <div class="signal-row">
+        <div class="signal-dots"><div class="signal-dot"></div></div>
+        1 entry shows this happening
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-top">
+        <div class="goal-text">Let go of comparing myself to old classmates</div>
+      </div>
+      <div class="meta-row">
+        <div class="tag-chip">Mindset</div>
+        <div class="date-text">Written Jul 29</div>
+      </div>
+      <div class="signal-row" style="color:#7a7568;">
+        No signals detected yet
+      </div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9.5L10 3l7 6.5"/><path d="M5 8.5V17h10V8.5"/></svg>
+      Home
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3.5h9a2 2 0 0 1 2 2V17H6a2 2 0 0 1-2-2V3.5z"/><path d="M4 3.5a2 2 0 0 0-2 2V15a2 2 0 0 0 2 2"/></svg>
+      Journal
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7.5"/><path d="M8.5 7.2 13 10l-4.5 2.8V7.2z"/></svg>
+      Playback
+    </div>
+    <div class="tabitem active">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 17S3 12.5 3 7.8A3.8 3.8 0 0 1 10 5.5 3.8 3.8 0 0 1 17 7.8C17 12.5 10 17 10 17z"/></svg>
+      Manifest
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.4 4.6l-1.4 1.4M6 12.6l-1.4 1.4M15.4 15.4l-1.4-1.4M6 7.4 4.6 6"/></svg>
+      Settings
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

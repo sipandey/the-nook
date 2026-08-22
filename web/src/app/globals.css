@@ -1,0 +1,40 @@
+@import "tailwindcss";
+
+/*
+ * Sage theme tokens — lifted directly from the mockups in
+ * design/mobile-flow/ so implementation matches the design canvas exactly.
+ * Deliberately light/calm, no violet — see the design brainstorm in
+ * docs/ARCHITECTURE.md §1.
+ */
+:root {
+  --color-bg: #f6f4ee;
+  --color-surface: #ffffff;
+  --color-border: #ded8c6;
+  --color-border-strong: #33362f;
+  --color-divider: #ece8db;
+  --color-text: #33362f;
+  --color-text-muted: #7a7568;
+  --color-text-faint: #9a947f;
+  --color-accent: #4f6b52;
+  --color-accent-soft: #e4ead9;
+  --color-warn: #a1543a;
+  --color-warn-soft: #f7e6dc;
+
+  /* Dark "night forest" surface, used by the Playback story cards */
+  --color-dark-bg: #2c3a2c;
+  --color-dark-bg-alt: #33402e;
+  --color-dark-bg-letter: #2f4a3a;
+  --color-dark-text: #f6f4ee;
+}
+
+@theme inline {
+  --color-background: var(--color-bg);
+  --color-foreground: var(--color-text);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+}

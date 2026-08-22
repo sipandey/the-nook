@@ -1,0 +1,85 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 14px 14px 10px; border-bottom: 1px solid #ece8db; flex-shrink: 0; }
+    .topbar-date { font-size: 12px; font-weight: 600; color: #7a7568; }
+    .icon-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+    .content { flex: 1; padding: 16px; display: flex; flex-direction: column; gap: 14px; overflow: hidden; }
+    .textarea { flex: 1; font-size: 14px; line-height: 1.6; color: #33362f; }
+    .textarea .placeholder-cursor { display: inline-block; width: 1.5px; height: 14px; background: #33362f; vertical-align: middle; margin-left: 2px; }
+    .mood-row { display: flex; align-items: center; gap: 10px; }
+    .mood-label { font-size: 11px; color: #7a7568; width: 46px; }
+    .mood-dots { display: flex; gap: 8px; }
+    .dot { width: 18px; height: 18px; border-radius: 50%; border: 1.3px solid #ded8c6; }
+    .dot.filled { background: #4f6b52; border-color: #4f6b52; }
+    .tags-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .tag { border: 1.2px solid #ded8c6; border-radius: 999px; padding: 5px 10px; font-size: 11px; display: flex; align-items: center; gap: 4px; }
+    .tag.add { color: #4f6b52; border-color: #4f6b52; border-style: dashed; }
+    .fab { position: absolute; right: 18px; bottom: 96px; width: 46px; height: 46px; border-radius: 50%; background: #4f6b52; color: #fff; display: flex; align-items: center; justify-content: center; border: 1.3px solid #4f6b52; }
+    .footer { padding: 12px 16px 18px; border-top: 1px solid #ece8db; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 12px; font-size: 13px; font-weight: 600; }
+    .mini-hero { height: 40px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 40" width="300" height="40" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="40" fill="url(#mh)"/>
+      <path d="M0,22 C50,16 90,26 150,20 C210,14 250,24 300,18 L300,40 L0,40 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,32 C60,28 120,36 180,30 C230,26 270,34 300,30 L300,40 L0,40 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="icon-btn"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12.5 4.5L6.5 10l6 5.5"/></svg></div>
+    <div class="topbar-date">Friday, August 21</div>
+    <div class="icon-btn" style="color:#3730a3;"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 10.5l4 4 8-9"/></svg></div>
+  </div>
+  <div class="content">
+    <div class="textarea">
+      Felt steadier walking into the review than I expected. Kept thinking back to how much I used to spiral before these &mdash;<span class="placeholder-cursor"></span>
+    </div>
+
+    <div class="mood-row">
+      <div class="mood-label">Mood</div>
+      <div class="mood-dots">
+        <div class="dot"></div><div class="dot"></div><div class="dot"></div><div class="dot filled"></div><div class="dot"></div>
+      </div>
+    </div>
+
+    <div class="tags-row">
+      <div class="tag">work</div>
+      <div class="tag">growth</div>
+      <div class="tag add">
+        <svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>
+        Add tag
+      </div>
+    </div>
+  </div>
+
+  <div class="fab">
+    <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7.5" y="2.5" width="5" height="9" rx="2.5"/><path d="M4.5 9.5a5.5 5.5 0 0 0 11 0"/><path d="M10 15v2.5"/></svg>
+  </div>
+
+  <div class="footer">
+    <div class="btn-primary">Save entry</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

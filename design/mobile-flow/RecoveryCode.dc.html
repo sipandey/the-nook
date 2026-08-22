@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .content { flex: 1; overflow: hidden; padding: 30px 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+    .key-icon { width: 44px; height: 44px; border-radius: 12px; background: #e4ead9; color: #4f6b52; display: flex; align-items: center; justify-content: center; }
+    .title { font-size: 19px; font-weight: 700; line-height: 1.3; }
+    .subtitle { font-size: 12px; color: #7a7568; line-height: 1.5; }
+    .code-box { border: 1.3px dashed #4f6b52; border-radius: 10px; background: #e4ead9; padding: 18px 14px; text-align: center; }
+    .code-text { font-family: 'SFMono-Regular', Menlo, Consolas, monospace; font-size: 16px; font-weight: 700; letter-spacing: .04em; color: #33362f; }
+    .code-actions { display: flex; gap: 10px; }
+    .code-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.2px solid #ded8c6; border-radius: 9px; padding: 9px; font-size: 11px; font-weight: 600; background: #fff; }
+    .warn-box { display: flex; gap: 8px; background: #f7e6dc; border-radius: 9px; padding: 10px 12px; }
+    .warn-box svg { flex-shrink: 0; margin-top: 1px; color: #a1543a; }
+    .warn-text { font-size: 10.5px; color: #7a3d28; line-height: 1.45; }
+    .confirm-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 2px; }
+    .checkbox { width: 18px; height: 18px; border-radius: 5px; background: #4f6b52; border: 1.3px solid #4f6b52; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; }
+    .confirm-text { font-size: 11.5px; color: #33362f; line-height: 1.4; }
+    .footer { padding: 12px 20px 18px; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 600; }
+    .mini-hero { height: 60px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 60" width="300" height="60" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="60" fill="url(#mh)"/>
+      <circle cx="150" cy="12" r="10" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,34 C60,44 120,26 180,38 C220,46 260,32 300,40 L300,60 L0,60 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,46 C70,56 140,38 210,50 C245,56 275,44 300,50 L300,60 L0,60 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="content">
+    <div class="key-icon">
+      <svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="7" cy="13" r="3.2"/><path d="M9.2 10.8L16 4M13.5 6.5l2 2M16 4l2 2"/></svg>
+    </div>
+    <div>
+      <div class="title">Save your recovery code</div>
+      <div class="subtitle" style="margin-top:6px;">If you ever forget your journal passphrase, this is the only way back in. We don't keep a copy.</div>
+    </div>
+
+    <div class="code-box">
+      <div class="code-text">XKPQ &middot; 7RTN &middot; 4LWD &middot; 9VCM</div>
+    </div>
+
+    <div class="code-actions">
+      <div class="code-action">
+        <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="7" y="7" width="9" height="9" rx="1.5"/><path d="M4 13V4.5A1.5 1.5 0 0 1 5.5 3H13"/></svg>
+        Copy
+      </div>
+      <div class="code-action">
+        <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 3v10M6 9.5l4 4 4-4"/><path d="M4 15.5h12"/></svg>
+        Save as file
+      </div>
+    </div>
+
+    <div class="warn-box">
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M10 3.5 17.5 16h-15L10 3.5z"/><path d="M10 8.5v3.2M10 14v.2"/></svg>
+      <div class="warn-text">Losing both your journal passphrase and this code means your entries <b>cannot be recovered</b> &mdash; by anyone, including us.</div>
+    </div>
+
+    <div class="confirm-row">
+      <div class="checkbox"><svg viewBox="0 0 20 20" width="12" height="12" fill="none" stroke="#fff" stroke-width="2"><path d="M4 10.5l3.5 3.5 8-8"/></svg></div>
+      <div class="confirm-text">I've saved this somewhere safe, outside this app.</div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

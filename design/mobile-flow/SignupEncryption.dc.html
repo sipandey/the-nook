@@ -1,0 +1,93 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .content { flex: 1; overflow: hidden; padding: 30px 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+    .lock-icon { width: 44px; height: 44px; border-radius: 12px; background: #e4ead9; color: #4f6b52; display: flex; align-items: center; justify-content: center; }
+    .title { font-size: 19px; font-weight: 700; line-height: 1.3; }
+    .subtitle { font-size: 12px; color: #7a7568; line-height: 1.5; }
+    .field-group { display: flex; flex-direction: column; gap: 12px; }
+    .field-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #7a7568; margin-bottom: 5px; }
+    .field { border: 1.3px solid #ded8c6; border-radius: 9px; padding: 11px 12px; font-size: 13px; background: #fff; display: flex; align-items: center; justify-content: space-between; }
+    .field.filled { color: #33362f; }
+    .field .placeholder { color: #33362f; }
+    .eye-icon { color: #7a7568; flex-shrink: 0; }
+    .strength-row { display: flex; gap: 4px; margin-top: -4px; }
+    .strength-bar { flex: 1; height: 3px; border-radius: 2px; background: #ece8db; }
+    .strength-bar.on { background: #4f6b52; }
+    .strength-label { font-size: 10px; color: #4f6b52; margin-top: -6px; }
+    .info-box { display: flex; gap: 8px; background: #f1efe4; border-radius: 9px; padding: 10px 12px; }
+    .info-box svg { flex-shrink: 0; margin-top: 1px; color: #7a7568; }
+    .info-text { font-size: 10.5px; color: #7a7568; line-height: 1.45; }
+    .info-text b { color: #33362f; }
+    .footer { padding: 12px 20px 18px; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 600; }
+    .mini-hero { height: 60px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 60" width="300" height="60" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="60" fill="url(#mh)"/>
+      <circle cx="45" cy="14" r="10" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,36 C50,44 90,28 150,38 C210,48 250,30 300,40 L300,60 L0,60 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,48 C60,54 120,40 180,50 C230,58 270,44 300,50 L300,60 L0,60 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="content">
+    <div class="lock-icon">
+      <svg viewBox="0 0 20 20" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M6.5 9V6a3.5 3.5 0 0 1 7 0v3"/></svg>
+    </div>
+    <div>
+      <div class="title">Set your journal passphrase</div>
+      <div class="subtitle" style="margin-top:6px;">This is different from your account password. It's the only thing that unlocks your entries — we never see it, and it's not stored anywhere we can read.</div>
+    </div>
+
+    <div class="field-group">
+      <div>
+        <div class="field-label">Journal passphrase</div>
+        <div class="field">
+          <span class="placeholder">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+          <svg class="eye-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.2"/></svg>
+        </div>
+        <div class="strength-row" style="margin-top:8px;">
+          <div class="strength-bar on"></div><div class="strength-bar on"></div><div class="strength-bar on"></div><div class="strength-bar"></div>
+        </div>
+        <div class="strength-label">Strong</div>
+      </div>
+      <div>
+        <div class="field-label">Confirm passphrase</div>
+        <div class="field">
+          <span class="placeholder">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</span>
+          <svg class="eye-icon" viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 10s3-5.5 8-5.5S18 10 18 10s-3 5.5-8 5.5S2 10 2 10z"/><circle cx="10" cy="10" r="2.2"/></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="info-box">
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="10" r="7.5"/><path d="M10 9.2v4.3M10 6.5v.3"/></svg>
+      <div class="info-text">Your account password gets you signed in. This passphrase unlocks your entries. We can't reset either for you &mdash; <b>you'll get a recovery code next.</b></div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="btn-primary">Continue</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

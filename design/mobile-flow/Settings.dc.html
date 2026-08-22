@@ -1,0 +1,187 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .topbar { padding: 16px 16px 10px; flex-shrink: 0; }
+    .title { font-size: 17px; font-weight: 700; }
+    .content { flex: 1; overflow: hidden; padding: 4px 16px 12px; display: flex; flex-direction: column; gap: 18px; }
+    .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7a7568; margin-bottom: 6px; }
+    .group { border: 1.3px solid #ded8c6; border-radius: 10px; background: #fff; overflow: hidden; }
+    .tone-option { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1px solid #ece8db; }
+    .tone-option:last-child { border-bottom: none; }
+    .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.3px solid #ded8c6; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .radio.on { border-color: #4f6b52; }
+    .radio.on .dot { width: 8px; height: 8px; border-radius: 50%; background: #4f6b52; }
+    .tone-name { font-size: 12px; font-weight: 600; }
+    .tone-desc { font-size: 10px; color: #7a7568; margin-top: 1px; }
+
+    .row { display: flex; align-items: center; gap: 10px; padding: 12px; border-bottom: 1px solid #ece8db; }
+    .row:last-child { border-bottom: none; }
+    .row-icon { width: 26px; height: 26px; border-radius: 7px; background: #e4ead9; color: #4f6b52; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .row-icon.neutral { background: #f1efe4; color: #33362f; }
+    .row-icon.warn { background: #f7e6dc; color: #a1543a; }
+    .row-text { flex: 1; min-width: 0; }
+    .row-title { font-size: 12px; font-weight: 600; }
+    .row-title.destructive { color: #a1543a; }
+    .row-sub { font-size: 10px; color: #7a7568; margin-top: 1px; }
+    .badge { font-size: 9px; font-weight: 600; background: #e4ead9; color: #3d5b40; border-radius: 999px; padding: 3px 8px; flex-shrink: 0; }
+    .chevron { color: #c9c2ab; flex-shrink: 0; }
+
+    .toggle { width: 34px; height: 20px; border-radius: 999px; background: #ded8c6; position: relative; flex-shrink: 0; }
+    .toggle.on { background: #4f6b52; }
+    .toggle .knob { position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+    .toggle.on .knob { left: 16px; }
+
+    .footnote { font-size: 10px; color: #7a7568; line-height: 1.5; padding: 0 2px; }
+    .tabbar { display: flex; justify-content: space-around; align-items: center; height: 58px; border-top: 1.3px solid #ded8c6; background: #f6f4ee; flex-shrink: 0; }
+    .tabitem { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 9px; color: #7a7568; }
+    .tabitem.active { color: #4f6b52; }
+    .mini-hero { height: 52px; flex-shrink: 0; overflow: hidden; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 52" width="300" height="52" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="52" fill="url(#mh)"/>
+      <circle cx="255" cy="12" r="9" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,32 C50,24 90,38 150,30 C210,22 250,36 300,28 L300,52 L0,52 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,42 C60,36 120,48 180,40 C230,34 270,46 300,40 L300,52 L0,52 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="title">Settings</div>
+  </div>
+  <div class="content">
+    <div>
+      <div class="section-label">AI tone</div>
+      <div class="group">
+        <div class="tone-option">
+          <div class="radio on"><div class="dot"></div></div>
+          <div><div class="tone-name">Coach</div><div class="tone-desc">Direct, motivating, calls out progress.</div></div>
+        </div>
+        <div class="tone-option">
+          <div class="radio"></div>
+          <div><div class="tone-name">Friend</div><div class="tone-desc">Warm, casual, checks in like a friend.</div></div>
+        </div>
+        <div class="tone-option">
+          <div class="radio"></div>
+          <div><div class="tone-name">Mirror</div><div class="tone-desc">Neutral, reflects patterns without opinion.</div></div>
+        </div>
+        <div class="tone-option">
+          <div class="radio"></div>
+          <div><div class="tone-name">Minimal</div><div class="tone-desc">Just the facts and trends.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">Privacy &amp; encryption</div>
+      <div class="group">
+        <div class="row">
+          <div class="row-icon"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4.5" y="9" width="11" height="8" rx="1.5"/><path d="M6.5 9V6a3.5 3.5 0 0 1 7 0v3"/></svg></div>
+          <div class="row-text">
+            <div class="row-title">Entries encrypted</div>
+            <div class="row-sub">AES-256 &middot; your key never leaves your control</div>
+          </div>
+          <div class="badge">Active</div>
+        </div>
+        <div class="row">
+          <div class="row-icon neutral"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="4"/><path d="M11 11l6 6M14.5 14.5l2-2"/></svg></div>
+          <div class="row-text">
+            <div class="row-title">Recovery code</div>
+            <div class="row-sub">Saved June 12, 2026</div>
+          </div>
+          <div class="chevron"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.5 4.5L13.5 10l-6 5.5"/></svg></div>
+        </div>
+        <div class="row">
+          <div class="row-icon neutral"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="8.5" width="12" height="7.5" rx="1.5"/><path d="M6.5 8.5V6a3.5 3.5 0 0 1 7 0v2.5"/><circle cx="10" cy="12" r="1"/></svg></div>
+          <div class="row-text">
+            <div class="row-title">Change journal passphrase</div>
+          </div>
+          <div class="chevron"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.5 4.5L13.5 10l-6 5.5"/></svg></div>
+        </div>
+        <div class="row">
+          <div class="row-icon neutral"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="10" cy="7" r="3.2"/><path d="M4.5 16c1-3 3-4.5 5.5-4.5s4.5 1.5 5.5 4.5"/></svg></div>
+          <div class="row-text">
+            <div class="row-title">Account &amp; sign-in</div>
+            <div class="row-sub">Email, password, connected accounts</div>
+          </div>
+          <div class="chevron"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.5 4.5L13.5 10l-6 5.5"/></svg></div>
+        </div>
+      </div>
+      <div class="footnote" style="margin-top:8px;">Your account password gets you signed in. Your journal passphrase is separate and unlocks your entries. Lose the passphrase without your recovery code, and entries can't be recovered &mdash; by design.</div>
+    </div>
+
+    <div>
+      <div class="section-label">Notifications</div>
+      <div class="group">
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Daily prompt</div>
+            <div class="row-sub">8:30 PM</div>
+          </div>
+          <div class="toggle on"><div class="knob"></div></div>
+        </div>
+        <div class="row">
+          <div class="row-text">
+            <div class="row-title">Playback ready</div>
+            <div class="row-sub">When a weekly recap is ready</div>
+          </div>
+          <div class="toggle on"><div class="knob"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="group">
+        <div class="row">
+          <div class="row-text"><div class="row-title">Export my data</div></div>
+          <div class="chevron"><svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7.5 4.5L13.5 10l-6 5.5"/></svg></div>
+        </div>
+        <div class="row">
+          <div class="row-text"><div class="row-title destructive">Delete account</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="tabbar">
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M3 9.5L10 3l7 6.5"/><path d="M5 8.5V17h10V8.5"/></svg>
+      Home
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 3.5h9a2 2 0 0 1 2 2V17H6a2 2 0 0 1-2-2V3.5z"/><path d="M4 3.5a2 2 0 0 0-2 2V15a2 2 0 0 0 2 2"/></svg>
+      Journal
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7.5"/><path d="M8.5 7.2 13 10l-4.5 2.8V7.2z"/></svg>
+      Playback
+    </div>
+    <div class="tabitem">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 17S3 12.5 3 7.8A3.8 3.8 0 0 1 10 5.5 3.8 3.8 0 0 1 17 7.8C17 12.5 10 17 10 17z"/></svg>
+      Manifest
+    </div>
+    <div class="tabitem active">
+      <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="2.5"/><path d="M10 2.5v2M10 15.5v2M17.5 10h-2M4.5 10h-2M15.4 4.6l-1.4 1.4M6 12.6l-1.4 1.4M15.4 15.4l-1.4-1.4M6 7.4 4.6 6"/></svg>
+      Settings
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

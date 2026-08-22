@@ -1,0 +1,89 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .mini-hero { height: 60px; flex-shrink: 0; overflow: hidden; }
+    .content { flex: 1; overflow: hidden; padding: 24px 24px 16px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; text-align: center; }
+    .check-badge { width: 68px; height: 68px; border-radius: 50%; background: #4f6b52; display: flex; align-items: center; justify-content: center; }
+    .headline { font-size: 19px; font-weight: 700; }
+    .subtext { font-size: 12.5px; color: #7a7568; line-height: 1.5; max-width: 220px; }
+    .meta-card { border: 1.3px solid #ded8c6; border-radius: 12px; background: #fff; padding: 14px 16px; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .meta-row { display: flex; align-items: center; justify-content: space-between; }
+    .meta-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #9a947f; }
+    .meta-value { font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 5px; }
+    .divider { height: 1px; background: #ece8db; }
+    .streak-row { display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 12px; color: #4f6b52; font-weight: 600; }
+    .tag-chips { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+    .tag-chip { font-size: 10px; color: #7a7568; border: 1px solid #ded8c6; border-radius: 999px; padding: 2px 8px; background: #fff; }
+    .footer { padding: 10px 20px 20px; display: flex; flex-direction: column; gap: 10px; flex-shrink: 0; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 600; }
+    .btn-secondary { display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.3px solid #ded8c6; background: #fff; color: #33362f; border-radius: 10px; padding: 12px; font-size: 13px; font-weight: 600; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 60" width="300" height="60" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="60" fill="url(#mh)"/>
+      <circle cx="150" cy="16" r="12" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,38 C50,30 90,44 150,36 C210,28 250,42 300,34 L300,60 L0,60 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,48 C60,42 120,54 180,46 C230,40 270,52 300,46 L300,60 L0,60 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="content">
+    <div class="check-badge">
+      <svg viewBox="0 0 20 20" width="28" height="28" fill="none" stroke="#fff" stroke-width="2"><path d="M4 10.5l4 4 8-9"/></svg>
+    </div>
+    <div>
+      <div class="headline">Entry saved</div>
+      <div class="subtext" style="margin-top:6px;">Encrypted and saved privately. Only you can read it.</div>
+    </div>
+
+    <div class="meta-card">
+      <div class="meta-row">
+        <div class="meta-label">Mood</div>
+        <div class="meta-value">
+          <svg viewBox="0 0 20 20" width="10" height="10" fill="#4f6b52"><circle cx="10" cy="10" r="8"/></svg>
+          Steady
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="meta-row">
+        <div class="meta-label">Tags</div>
+        <div class="tag-chips">
+          <div class="tag-chip">work</div>
+          <div class="tag-chip">growth</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="streak-row">
+      <svg viewBox="0 0 20 20" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M10 2.5c1 3 4 4 4 8a4 4 0 0 1-8 0c0-1.5.8-2.3 1.5-3 0 1.2.7 1.8 1.3 1.8 0-3 .3-5 1.2-6.8z"/></svg>
+      13 day streak — your best yet
+    </div>
+  </div>
+  <div class="footer">
+    <div class="btn-primary">Back to home</div>
+    <div class="btn-secondary">
+      <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4.5 4.5h9a2 2 0 0 1 2 2V16H6a2 2 0 0 1-2-2V4.5z"/></svg>
+      View entry
+    </div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

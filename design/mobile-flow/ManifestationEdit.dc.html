@@ -1,0 +1,124 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .mini-hero { height: 52px; flex-shrink: 0; overflow: hidden; }
+    .topbar { display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; border-bottom: 1px solid #ece8db; flex-shrink: 0; }
+    .topbar-title { font-size: 13px; font-weight: 700; }
+    .icon-btn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; }
+    .icon-btn.save { color: #4f6b52; }
+    .content { flex: 1; overflow: hidden; padding: 16px 16px 12px; display: flex; flex-direction: column; gap: 16px; }
+    .section-label { font-size: 10px; text-transform: uppercase; letter-spacing: .06em; color: #7a7568; margin-bottom: 7px; }
+    .textarea-box { border: 1.3px solid #ded8c6; border-radius: 10px; background: #fff; padding: 12px; }
+    .textarea-text { font-size: 14px; line-height: 1.5; color: #33362f; }
+    .cursor-blink { display: inline-block; width: 1.5px; height: 14px; background: #4f6b52; vertical-align: middle; margin-left: 2px; }
+    .char-count { font-size: 9px; color: #9a947f; text-align: right; margin-top: 6px; }
+    .chip-row { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { border: 1.2px solid #ded8c6; border-radius: 999px; padding: 6px 12px; font-size: 11px; color: #7a7568; background: #fff; }
+    .chip.selected { border-color: #4f6b52; background: #4f6b52; color: #fff; font-weight: 600; }
+    .chip.add { border-style: dashed; color: #4f6b52; border-color: #4f6b52; display: flex; align-items: center; gap: 4px; }
+    .option-group { border: 1.3px solid #ded8c6; border-radius: 10px; background: #fff; overflow: hidden; }
+    .option-row { display: flex; align-items: center; gap: 10px; padding: 11px 12px; border-bottom: 1px solid #ece8db; }
+    .option-row:last-child { border-bottom: none; }
+    .radio { width: 16px; height: 16px; border-radius: 50%; border: 1.3px solid #ded8c6; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+    .radio.on { border-color: #4f6b52; }
+    .radio.on .dot { width: 8px; height: 8px; border-radius: 50%; background: #4f6b52; }
+    .option-name { font-size: 12.5px; font-weight: 500; }
+    .toggle-row { display: flex; align-items: center; gap: 10px; padding: 12px; border: 1.3px solid #ded8c6; border-radius: 10px; background: #fff; }
+    .toggle-text { flex: 1; }
+    .toggle-title { font-size: 12px; font-weight: 600; }
+    .toggle-sub { font-size: 10px; color: #7a7568; margin-top: 1px; }
+    .toggle { width: 34px; height: 20px; border-radius: 999px; background: #4f6b52; position: relative; flex-shrink: 0; }
+    .toggle .knob { position: absolute; top: 2px; left: 16px; width: 16px; height: 16px; border-radius: 50%; background: #fff; }
+    .footer { padding: 10px 16px 16px; display: flex; flex-direction: column; gap: 10px; align-items: center; }
+    .btn-primary { width: 100%; display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 600; }
+    .delete-link { font-size: 11.5px; color: #a1543a; font-weight: 600; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 52" width="300" height="52" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="52" fill="url(#mh)"/>
+      <circle cx="150" cy="10" r="9" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,30 C60,20 120,36 180,26 C220,20 260,32 300,26 L300,52 L0,52 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,42 C70,34 140,46 210,38 C245,34 275,44 300,40 L300,52 L0,52 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="topbar">
+    <div class="icon-btn"><svg viewBox="0 0 20 20" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12.5 4.5L6.5 10l6 5.5"/></svg></div>
+    <div class="topbar-title">Edit manifestation</div>
+    <div class="icon-btn save"><svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 10.5l4 4 8-9"/></svg></div>
+  </div>
+  <div class="content">
+    <div>
+      <div class="section-label">What are you manifesting?</div>
+      <div class="textarea-box">
+        <div class="textarea-text">Feel confident presenting to leadership<span class="cursor-blink"></span></div>
+      </div>
+      <div class="char-count">39 / 200</div>
+    </div>
+
+    <div>
+      <div class="section-label">Category</div>
+      <div class="chip-row">
+        <div class="chip selected">Career</div>
+        <div class="chip">Relationships</div>
+        <div class="chip">Health</div>
+        <div class="chip">Mindset</div>
+        <div class="chip">Habits</div>
+        <div class="chip add">
+          <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 4v12M4 10h12"/></svg>
+          Custom
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="section-label">How often should this resurface?</div>
+      <div class="option-group">
+        <div class="option-row">
+          <div class="radio"></div>
+          <div class="option-name">Weekly, in playback</div>
+        </div>
+        <div class="option-row">
+          <div class="radio"></div>
+          <div class="option-name">Monthly, in playback</div>
+        </div>
+        <div class="option-row">
+          <div class="radio on"><div class="dot"></div></div>
+          <div class="option-name">Let AI decide the right moment</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="toggle-row">
+      <div class="toggle-text">
+        <div class="toggle-title">Detect progress automatically</div>
+        <div class="toggle-sub">Scan new entries for signals this is happening</div>
+      </div>
+      <div class="toggle"><div class="knob"></div></div>
+    </div>
+  </div>
+  <div class="footer">
+    <div class="btn-primary">Save manifestation</div>
+    <div class="delete-link">Delete manifestation</div>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

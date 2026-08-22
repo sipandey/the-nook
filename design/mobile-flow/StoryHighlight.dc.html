@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #33402e; color: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33402e; }
+    .progress-row { display: flex; gap: 4px; padding: 10px 12px 0; flex-shrink: 0; }
+    .seg-track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.25); overflow: hidden; }
+    .seg-fill { height: 100%; background: #fff; }
+    .storytop { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; flex-shrink: 0; }
+    .tone-label { font-size: 10px; color: rgba(255,255,255,0.65); }
+    .content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 30px; gap: 16px; text-align: center; }
+    .quote-mark { font-size: 46px; line-height: 1; color: #b7d9a8; font-family: Georgia, serif; }
+    .quote { font-size: 18px; font-style: italic; line-height: 1.5; font-family: Georgia, serif; }
+    .quote-meta { font-size: 11px; color: rgba(246,244,238,0.65); margin-top: 4px; }
+    .read-more { display: flex; align-items: center; gap: 5px; font-size: 11px; color: #cfe4c2; border: 1px solid rgba(246,244,238,0.35); border-radius: 999px; padding: 6px 12px; margin-top: 4px; }
+    .tapzones { position: absolute; top: 40px; bottom: 90px; left: 0; right: 0; display: flex; }
+    .tapzones div { flex: 1; }
+    .hill-silhouette { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; pointer-events: none; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="progress-row">
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:0%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:0%"></div></div>
+  </div>
+  <div class="storytop">
+    <div class="tone-label">Weekly Playback &middot; as your Coach</div>
+    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.6"><path d="M4.5 4.5l11 11M15.5 4.5l-11 11"/></svg>
+  </div>
+  <div class="content">
+    <div class="quote-mark">&ldquo;</div>
+    <div class="quote">I actually said what I meant in the meeting instead of softening it into nothing.</div>
+    <div class="quote-meta">You wrote this on Tuesday</div>
+    <div class="read-more">
+      <svg viewBox="0 0 20 20" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5.5h9a2 2 0 0 1 2 2V16H6a2 2 0 0 1-2-2V5.5z"/></svg>
+      Read the full entry
+    </div>
+  </div>
+  <div class="tapzones"><div></div><div></div></div>
+  <div class="hill-silhouette">
+    <svg viewBox="0 0 300 46" width="300" height="46" preserveAspectRatio="none">
+      <path d="M0,26 C50,18 90,32 150,24 C210,16 250,28 300,20 L300,46 L0,46 Z" fill="rgba(246,244,238,0.07)"/>
+      <path d="M0,36 C60,30 120,42 180,34 C230,28 270,40 300,34 L300,46 L0,46 Z" fill="rgba(246,244,238,0.11)"/>
+    </svg>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

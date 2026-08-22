@@ -1,0 +1,74 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #2f4a3a; color: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #2f4a3a; }
+    .progress-row { display: flex; gap: 4px; padding: 10px 12px 0; flex-shrink: 0; }
+    .seg-track { flex: 1; height: 3px; border-radius: 2px; background: rgba(255,255,255,0.25); overflow: hidden; }
+    .seg-fill { height: 100%; background: #fff; }
+    .storytop { display: flex; align-items: center; justify-content: space-between; padding: 10px 14px; flex-shrink: 0; }
+    .tone-label { font-size: 10px; color: rgba(255,255,255,0.65); }
+    .content { flex: 1; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 26px; gap: 16px; text-align: center; }
+    .envelope { color: #cfe4c2; }
+    .headline { font-size: 15px; font-weight: 600; color: rgba(246,244,238,0.75); }
+    .letter-text { font-size: 15px; line-height: 1.55; font-family: Georgia, serif; font-style: italic; }
+    .cta-row { display: flex; gap: 10px; width: 100%; margin-top: 4px; }
+    .cta { flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px; border: 1.3px solid rgba(246,244,238,0.4); border-radius: 10px; padding: 10px; font-size: 11px; font-weight: 600; }
+    .cta.primary { background: #fff; color: #2f4a3a; border-color: #fff; }
+    .tapzones { position: absolute; top: 40px; bottom: 90px; left: 0; right: 0; display: flex; }
+    .tapzones div { flex: 1; }
+    .hill-silhouette { position: absolute; bottom: 0; left: 0; right: 0; height: 46px; pointer-events: none; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="progress-row">
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+    <div class="seg-track"><div class="seg-fill" style="width:100%"></div></div>
+  </div>
+  <div class="storytop">
+    <div class="tone-label">Weekly Playback &middot; as your Coach</div>
+    <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="rgba(255,255,255,0.8)" stroke-width="1.6"><path d="M4.5 4.5l11 11M15.5 4.5l-11 11"/></svg>
+  </div>
+  <div class="content">
+    <div class="envelope">
+      <svg viewBox="0 0 20 20" width="30" height="30" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="4.5" width="16" height="11" rx="1.5"/><path d="M2.5 5.5L10 11l7.5-5.5"/></svg>
+    </div>
+    <div class="headline">A note from your March self</div>
+    <div class="letter-text">"I said I wanted to feel confident presenting at work. Read your last 3 entries &mdash; you're doing it."</div>
+    <div class="cta-row">
+      <div class="cta">
+        <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M5 3h10v14l-5-3.5L5 17V3z"/></svg>
+        Save this
+      </div>
+      <div class="cta primary">
+        <svg viewBox="0 0 20 20" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12.5 3.5l4 4L6 18H2v-4L12.5 3.5z"/></svg>
+        Write to future self
+      </div>
+    </div>
+  </div>
+  <div class="tapzones"><div></div><div></div></div>
+  <div class="hill-silhouette">
+    <svg viewBox="0 0 300 46" width="300" height="46" preserveAspectRatio="none">
+      <path d="M0,26 C50,18 90,32 150,24 C210,16 250,28 300,20 L300,46 L0,46 Z" fill="rgba(246,244,238,0.07)"/>
+      <path d="M0,36 C60,30 120,42 180,34 C230,28 270,40 300,34 L300,46 L0,46 Z" fill="rgba(246,244,238,0.11)"/>
+    </svg>
+  </div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,96 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; }
+    .frame { width: 300px; height: 620px; background: #f6f4ee; font-family: 'Segoe UI', system-ui, -apple-system, sans-serif; color: #33362f; display: flex; flex-direction: column; position: relative; overflow: hidden; border: 1.5px solid #33362f; }
+    .mini-hero { height: 60px; flex-shrink: 0; overflow: hidden; }
+    .content { flex: 1; overflow: hidden; padding: 26px 20px 16px; display: flex; flex-direction: column; gap: 16px; }
+    .brand-row { display: flex; align-items: center; gap: 10px; }
+    .brand-icon { width: 34px; height: 34px; border-radius: 9px; background: #4f6b52; display: flex; align-items: center; justify-content: center; color: #fff; }
+    .brand-name { font-size: 16px; font-weight: 700; }
+    .title { font-size: 18px; font-weight: 700; line-height: 1.3; margin-top: 4px; }
+    .subtitle { font-size: 12px; color: #7a7568; }
+    .social-btn { display: flex; align-items: center; justify-content: center; gap: 8px; border: 1.3px solid #ded8c6; border-radius: 9px; padding: 11px; font-size: 12.5px; font-weight: 600; background: #fff; }
+    .divider-row { display: flex; align-items: center; gap: 10px; }
+    .divider-line { flex: 1; height: 1px; background: #ded8c6; }
+    .divider-text { font-size: 10px; color: #9a947f; }
+    .field-group { display: flex; flex-direction: column; gap: 10px; }
+    .field-label { font-size: 10px; text-transform: uppercase; letter-spacing: .05em; color: #7a7568; margin-bottom: 5px; }
+    .field { border: 1.3px solid #ded8c6; border-radius: 9px; padding: 11px 12px; font-size: 13px; background: #fff; }
+    .btn-primary { display: flex; align-items: center; justify-content: center; gap: 6px; background: #4f6b52; color: #fff; border-radius: 10px; padding: 13px; font-size: 13px; font-weight: 600; }
+    .footer-note { font-size: 11px; color: #7a7568; text-align: center; }
+    .footer-note b { color: #4f6b52; }
+    .powered-by { font-size: 9px; color: #b3ab97; text-align: center; }
+  </style>
+</helmet>
+<div class="frame">
+  <div class="mini-hero">
+    <svg viewBox="0 0 300 60" width="300" height="60" preserveAspectRatio="none">
+      <defs><linearGradient id="mh" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#eef1e4"/><stop offset="1" stop-color="#dbe6d3"/></linearGradient></defs>
+      <rect width="300" height="60" fill="url(#mh)"/>
+      <circle cx="150" cy="16" r="12" fill="#f3e9c9" opacity="0.85"/>
+      <path d="M0,38 C50,30 90,44 150,36 C210,28 250,42 300,34 L300,60 L0,60 Z" fill="#a9c19f" opacity="0.85"/>
+      <path d="M0,48 C60,42 120,54 180,46 C230,40 270,52 300,46 L300,60 L0,60 Z" fill="#7c9b74"/>
+    </svg>
+  </div>
+  <div class="content">
+    <div class="brand-row">
+      <div class="brand-icon">
+        <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 3.5h9a2 2 0 0 1 2 2V17H6a2 2 0 0 1-2-2V3.5z"/></svg>
+      </div>
+      <div class="brand-name">The Nook</div>
+    </div>
+    <div>
+      <div class="title">Create your account</div>
+      <div class="subtitle" style="margin-top:4px;">This gets you signed in — your journal itself stays locked behind a separate passphrase, next.</div>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:8px;">
+      <div class="social-btn">
+        <svg viewBox="0 0 20 20" width="15" height="15"><path fill="#4285F4" d="M19.6 10.23c0-.68-.06-1.36-.18-2H10v3.79h5.4a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 3-4.32 3-7.31z"/><path fill="#34A853" d="M10 20c2.7 0 4.96-.9 6.62-2.44l-3.24-2.5c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.75-5.6-4.12H1.06v2.58A10 10 0 0 0 10 20z"/><path fill="#FBBC05" d="M4.4 11.9a6 6 0 0 1 0-3.8V5.52H1.06a10 10 0 0 0 0 8.96l3.34-2.58z"/><path fill="#EA4335" d="M10 3.98c1.47 0 2.79.5 3.83 1.5l2.87-2.87A9.6 9.6 0 0 0 10 0 10 10 0 0 0 1.06 5.52L4.4 8.1C5.2 5.73 7.4 3.98 10 3.98z"/></svg>
+        Continue with Google
+      </div>
+      <div class="social-btn">
+        <svg viewBox="0 0 20 20" width="14" height="14" fill="#33362f"><path d="M13.9 10.6c0-2 1.6-3 1.7-3-1-1.4-2.4-1.6-2.9-1.6-1.2-.1-2.4.7-3 .7-.6 0-1.6-.7-2.7-.7-1.4 0-2.6.8-3.3 2-1.4 2.4-.4 6 1 8 .7 1 1.5 2.1 2.6 2 1-.1 1.4-.7 2.7-.7s1.6.7 2.7.6c1.1 0 1.8-1 2.5-2 .6-.9.9-1.7.9-1.8-.1 0-2.1-.8-2.2-3.1z"/><path d="M11.9 4.4c.6-.7 1-1.7.9-2.7-.9 0-1.9.6-2.5 1.3-.5.6-1 1.6-.9 2.6 1 .1 1.9-.5 2.5-1.2z"/></svg>
+        Continue with Apple
+      </div>
+    </div>
+
+    <div class="divider-row">
+      <div class="divider-line"></div>
+      <div class="divider-text">OR</div>
+      <div class="divider-line"></div>
+    </div>
+
+    <div class="field-group">
+      <div>
+        <div class="field-label">Email</div>
+        <div class="field">sid@example.com</div>
+      </div>
+      <div>
+        <div class="field-label">Password</div>
+        <div class="field">&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;</div>
+      </div>
+    </div>
+
+    <div class="btn-primary">Continue</div>
+    <div class="footer-note">Already have an account? <b>Sign in</b></div>
+  </div>
+  <div class="powered-by">Secured by Clerk</div>
+</div>
+</x-dc>
+<script data-dc-script data-props='{}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>
