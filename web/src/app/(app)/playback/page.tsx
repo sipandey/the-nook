@@ -1,7 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useEntries } from "@/lib/hooks/useEntries";
 import { periodRange, entriesInRange, topTag, type Period } from "@/lib/period";
@@ -67,6 +69,8 @@ export default function PlaybackPage() {
           <div className="w-[120vw] h-[120vw] rounded-full bg-surface-container-high opacity-20 blur-3xl" />
         </div>
 
+        <AppHeader />
+
         <main className="flex-1 flex flex-col items-center justify-center px-container-padding py-stack-gap relative z-10 text-center">
           <div className="w-full aspect-square max-w-[240px] mb-8 rounded-full overflow-hidden bg-surface-container-low shadow-sm border border-outline-variant/30">
             {/* eslint-disable-next-line @next/next/no-img-element -- static decorative asset */}
@@ -90,7 +94,7 @@ export default function PlaybackPage() {
 
         <nav className="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-low flex justify-around items-center px-gutter py-stack-loose pb-safe md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.02)] border-t border-outline-variant/10">
           {TABS.map((tab) => (
-            <a
+            <Link
               key={tab.href}
               href={tab.href}
               className={`flex flex-col items-center justify-center transition-transform duration-300 active:scale-90 ${
@@ -101,7 +105,7 @@ export default function PlaybackPage() {
             >
               <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} className="mb-1" />
               <span className="text-label-sm">{tab.label}</span>
-            </a>
+            </Link>
           ))}
         </nav>
       </div>
@@ -110,7 +114,9 @@ export default function PlaybackPage() {
 
   return (
     <div className="font-editorial-sans bg-inverse-surface text-inverse-on-surface antialiased min-h-screen relative">
-      <main className="min-h-screen pb-32 px-container-padding pt-12">
+      <AppHeader variant="dark" />
+
+      <main className="pb-32 px-container-padding pt-12">
         {isLoading && <p className="text-sm text-inverse-on-surface/60">Loading…</p>}
 
         <div className="flex justify-center mb-12">
@@ -191,7 +197,7 @@ export default function PlaybackPage() {
 
       <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-inverse-surface/90 backdrop-blur-md rounded-t-xl border-t-0 shadow-sm md:hidden">
         {TABS.map((tab) => (
-          <a
+          <Link
             key={tab.href}
             href={tab.href}
             className={`flex flex-col items-center justify-center transition-all duration-200 ${
@@ -202,7 +208,7 @@ export default function PlaybackPage() {
           >
             <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} />
             <span className="text-label-sm mt-1">{tab.label}</span>
-          </a>
+          </Link>
         ))}
       </nav>
     </div>

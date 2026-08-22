@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useManifestations, useDecryptedManifestations } from "@/lib/hooks/useManifestations";
@@ -16,13 +17,7 @@ export default function ManifestationsPage() {
   if (!isLoading && active.length === 0) {
     return (
       <div className="font-editorial-sans min-h-screen flex flex-col relative pb-[90px] md:pb-0 bg-background text-on-background">
-        <header className="w-full top-0 sticky bg-background flex justify-between items-center px-container-padding h-16 z-40">
-          <span className="w-10" />
-          <h1 className="text-headline-md font-editorial-display text-primary tracking-tight">The Nook</h1>
-          <Link href="/settings" aria-label="Settings" className="text-on-surface-variant">
-            <MaterialIcon name="settings" />
-          </Link>
-        </header>
+        <AppHeader />
 
         <main className="flex-grow flex flex-col items-center justify-center px-container-padding py-stack-gap mb-24 max-w-lg mx-auto w-full relative">
           <div className="w-full aspect-square mb-stack-gap relative rounded-[40px] overflow-hidden bg-surface-container-low shadow-[inset_0_0_100px_rgba(242,239,233,0.5)]">

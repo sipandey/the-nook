@@ -4,6 +4,7 @@ import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { MaterialIcon } from "@/components/MaterialIcon";
+import { MoodPicker, MOOD_OPTIONS } from "@/components/MoodPicker";
 import { TagInput } from "@/components/composer/TagInput";
 import { VoiceRecorder } from "@/components/composer/VoiceRecorder";
 import { useSaveEntry } from "@/lib/hooks/useSaveEntry";
@@ -13,14 +14,6 @@ import { computeStreak } from "@/lib/streak";
 import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
 
 type Stage = "voice" | "text" | "saved";
-
-const MOOD_OPTIONS: { value: number; color: string; label: string }[] = [
-  { value: 1, color: "bg-mood-rose", label: "Struggling" },
-  { value: 2, color: "bg-mood-rose", label: "Low" },
-  { value: 3, color: "bg-mood-ochre", label: "Steady" },
-  { value: 4, color: "bg-mood-sage", label: "Good" },
-  { value: 5, color: "bg-mood-sage", label: "Great" },
-];
 
 function WriteContent() {
   const params = useSearchParams();
@@ -207,25 +200,7 @@ function WriteContent() {
             <span className="text-label-sm text-on-surface-variant tracking-wider uppercase opacity-80 min-w-[48px]">
               Mood
             </span>
-            <div className="flex gap-3">
-              {MOOD_OPTIONS.map((opt) => {
-                const active = mood === opt.value;
-                return (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    aria-label={opt.label}
-                    aria-pressed={active}
-                    onClick={() => setMood(opt.value)}
-                    className={`w-8 h-8 rounded-full border-2 transition-transform hover:scale-110 shadow-sm flex items-center justify-center ${
-                      active ? "border-primary" : "border-transparent"
-                    }`}
-                  >
-                    <div className={`rounded-full ${opt.color} ${active ? "w-6 h-6" : "w-5 h-5 opacity-60"}`} />
-                  </button>
-                );
-              })}
-            </div>
+            <MoodPicker value={mood} onChange={setMood} />
           </div>
           <hr className="border-t border-outline-variant/20" />
           <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 py-2">

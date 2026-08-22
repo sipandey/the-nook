@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
+import { AppHeader } from "@/components/AppHeader";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useEntries } from "@/lib/hooks/useEntries";
@@ -52,13 +53,7 @@ export default function JournalPage() {
 
   return (
     <div className="font-editorial-sans mx-auto flex min-h-screen w-full max-w-md flex-col bg-background text-on-background pb-24">
-      <header className="flex justify-between items-center w-full px-container-padding py-4 sticky top-0 z-40 bg-background">
-        <span className="w-10" />
-        <h1 className="font-editorial-display text-headline-lg-mobile text-primary tracking-tight">The Nook</h1>
-        <Link href="/settings" aria-label="Settings" className="text-outline">
-          <MaterialIcon name="settings" size={20} />
-        </Link>
-      </header>
+      <AppHeader />
 
       <main className="flex-grow px-container-padding pt-2 max-w-3xl mx-auto w-full">
         {!isLoading && !hasAnyEntries ? (
