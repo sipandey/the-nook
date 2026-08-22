@@ -1,17 +1,19 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { MaterialIcon } from "@/components/MaterialIcon";
 
-const BAR_COUNT = 15;
+const BAR_COUNT = 40;
 
 /**
  * Real microphone-driven waveform via AnalyserNode — not an animated
  * placeholder. Note this is batch transcription (record, then send the
  * whole clip to Whisper on "Done"), not the live word-by-word streaming
- * transcript shown in the EntryComposerVoice.dc.html mockup — Whisper's
- * REST API doesn't support incremental results; true live transcription
- * would need OpenAI's Realtime (WebSocket) API, which is a bigger swap
- * than this pass covers.
+ * transcript shown in the mockup's transcribing state — Whisper's REST API
+ * doesn't support incremental results; true live transcription would need
+ * OpenAI's Realtime (WebSocket) API, which is a bigger swap than this pass
+ * covers. The blurred lines during transcription are purely decorative
+ * texture, not a claim that partial results exist.
  */
 export function VoiceRecorder({
   onTranscribed,
@@ -49,7 +51,7 @@ export function VoiceRecorder({
         audioCtxRef.current = audioCtx;
         const source = audioCtx.createMediaStreamSource(stream);
         const analyser = audioCtx.createAnalyser();
-        analyser.fftSize = 64;
+        analyser.fftSize = 128;
         source.connect(analyser);
 
         const data = new Uint8Array(analyser.frequencyBinCount);
@@ -59,7 +61,7 @@ export function VoiceRecorder({
           analyser.getByteFrequencyData(data);
           const next: number[] = [];
           for (let i = 0; i < BAR_COUNT; i++) {
-            next.push(4 + ((data[i * step] ?? 0) / 255) * 48);
+            next.push(4 + ((data[i * step] ?? 0) / 255) * 92);
           }
           setLevels(next);
           rafRef.current = requestAnimationFrame(tick);
@@ -144,98 +146,132 @@ export function VoiceRecorder({
     }
   }
 
-  const mm = String(Math.floor(seconds / 60));
+  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
 
   if (status === "error") {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-        <p className="text-sm text-warn">{error}</p>
-        <button type="button" onClick={onCancel} className="text-sm font-semibold text-accent">
+        <p className="text-sm text-error">{error}</p>
+        <button type="button" onClick={onCancel} className="text-sm font-semibold text-primary">
           Back to writing
         </button>
       </div>
     );
   }
 
+  if (status === "transcribing") {
+    return (
+      <>
+        <header className="bg-surface w-full top-0 sticky flex items-center justify-between px-container-padding h-16">
+          <span className="w-10" />
+          <h1 className="font-editorial-display text-headline-md text-primary text-center flex-1">New Entry</h1>
+          <span className="w-10" />
+        </header>
+
+        <main className="flex-1 flex flex-col px-container-padding py-stack-gap">
+          <div className="flex flex-col items-center justify-center mt-12 mb-16 gap-inline-gap">
+            <div className="relative w-16 h-16 flex items-center justify-center mb-4">
+              <div className="absolute inset-0 bg-primary-fixed rounded-full animate-pulse opacity-50 blur-md" />
+              <div className="absolute inset-2 bg-primary-container rounded-full animate-pulse" />
+              <div className="relative w-6 h-6 bg-primary rounded-full shadow-sm" />
+            </div>
+            <h2 className="font-editorial-display text-headline-lg-mobile text-on-surface text-center">
+              Transcribing…
+            </h2>
+            <p className="text-body-md text-on-surface-variant text-center opacity-80 animate-pulse">
+              Stitching your thoughts together…
+            </p>
+          </div>
+
+          <div className="flex-1 w-full max-w-2xl mx-auto flex flex-col gap-2 overflow-hidden relative" aria-hidden="true">
+            <div className="text-body-lg text-surface-tint blur-[4px] space-y-4 px-4 select-none">
+              <p>The morning light caught the edges of the room in a way that felt entirely new.</p>
+              <p className="w-10/12">A slight shift in perspective can reveal details previously ignored.</p>
+              <p className="w-8/12">Silence often carries more weight than words.</p>
+            </div>
+          </div>
+        </main>
+
+        <footer className="w-full pb-8 pt-4 px-container-padding flex justify-center items-center">
+          <div className="flex items-center gap-2 px-4 py-2 bg-surface-container-low rounded-full">
+            <MaterialIcon name="lock" size={16} className="text-outline" />
+            <span className="text-label-sm text-on-surface-variant uppercase tracking-wider">
+              Processed securely, never stored
+            </span>
+          </div>
+        </footer>
+      </>
+    );
+  }
+
   return (
-    <div className="flex flex-1 flex-col">
-      <div className="flex items-center justify-center gap-1.5 pt-3">
-        <span
-          className={`h-2 w-2 rounded-full ${
-            status === "transcribing" ? "bg-accent" : paused ? "bg-faint" : "bg-warn"
-          }`}
-        />
-        <span className="text-[11px] font-semibold tracking-wide text-muted">
-          {status === "transcribing" ? "TRANSCRIBING" : paused ? "PAUSED" : "RECORDING"}
-        </span>
-      </div>
-
-      <div className="flex flex-1 flex-col items-center justify-center gap-3">
-        <div className="flex h-14 items-end gap-[3px]" aria-hidden="true">
-          {levels.map((h, i) => (
-            <div key={i} style={{ height: h }} className="w-1 rounded-full bg-accent" />
-          ))}
-        </div>
-        <div className="font-mono text-2xl font-semibold tabular-nums">
-          {mm}:{ss}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-center gap-7 pb-8 pt-3">
+    <>
+      <header className="bg-surface w-full top-0 sticky flex items-center justify-between px-container-padding h-16">
         <button
           type="button"
           onClick={cancel}
-          aria-label="Cancel"
-          className="flex h-11 w-11 items-center justify-center rounded-full border-[1.3px] border-border bg-surface text-foreground"
+          aria-label="Close"
+          className="text-on-surface-variant hover:bg-surface-container-high p-2 rounded-full transition-colors"
         >
-          <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.7">
-            <path d="M4.5 4.5l11 11M15.5 4.5l-11 11" />
-          </svg>
+          <MaterialIcon name="close" />
         </button>
-        <button
-          type="button"
-          onClick={finish}
-          disabled={status === "transcribing"}
-          aria-label="Done"
-          className="flex h-[62px] w-[62px] items-center justify-center rounded-full bg-accent text-white disabled:opacity-60"
-        >
-          {status === "transcribing" ? (
-            <svg
-              viewBox="0 0 20 20"
-              width="20"
-              height="20"
-              className="animate-spin"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
-              <path d="M10 3a7 7 0 1 0 7 7" strokeLinecap="round" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" width="18" height="18" fill="currentColor">
-              <rect x="6" y="6" width="8" height="8" rx="1.5" />
-            </svg>
-          )}
-        </button>
-        <button
-          type="button"
-          onClick={togglePause}
-          aria-label={paused ? "Resume" : "Pause"}
-          className="flex h-11 w-11 items-center justify-center rounded-full border-[1.3px] border-border bg-surface text-foreground"
-        >
-          {paused ? (
-            <svg viewBox="0 0 20 20" width="14" height="14" fill="currentColor">
-              <path d="M6 4l10 6-10 6V4z" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="1.8">
-              <rect x="6" y="4.5" width="2.6" height="11" rx="1" />
-              <rect x="11.4" y="4.5" width="2.6" height="11" rx="1" />
-            </svg>
-          )}
-        </button>
-      </div>
-    </div>
+        <h1 className="font-editorial-display text-headline-md text-primary">Voice Entry</h1>
+        <span className="w-10" />
+      </header>
+
+      <main className="flex-grow flex flex-col items-center justify-center px-container-padding">
+        <div className="mb-12">
+          <h2 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-primary text-center tabular-nums">
+            {mm}:{ss}
+          </h2>
+        </div>
+
+        <div className="h-32 w-full max-w-md flex items-center justify-center gap-[3px] mb-16" aria-hidden="true">
+          {levels.map((h, i) => (
+            <div
+              key={i}
+              style={{ height: `${h}%` }}
+              className={`w-1 rounded-full transition-[height] duration-100 ${
+                paused ? "bg-outline-variant" : "bg-primary"
+              }`}
+            />
+          ))}
+        </div>
+
+        <div className="flex items-center justify-between w-full max-w-sm gap-inline-gap">
+          <button
+            type="button"
+            onClick={cancel}
+            className="text-label-sm text-on-surface-variant hover:text-on-surface transition-colors py-2 px-4"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="button"
+            onClick={togglePause}
+            className="w-16 h-16 rounded-full bg-primary-container text-on-primary-container flex items-center justify-center hover:bg-primary hover:text-on-primary transition-colors shadow-sm"
+          >
+            <MaterialIcon name={paused ? "play_arrow" : "pause"} filled size={30} />
+          </button>
+
+          <button
+            type="button"
+            onClick={finish}
+            className="text-label-sm text-primary hover:text-primary-fixed transition-colors py-2 px-4 font-bold"
+          >
+            Done
+          </button>
+        </div>
+      </main>
+
+      <footer className="py-6 px-container-padding flex items-center justify-center w-full">
+        <div className="flex items-center gap-2 text-on-surface-variant opacity-80">
+          <MaterialIcon name="lock" size={16} />
+          <span className="text-label-sm">Processed securely, never stored</span>
+        </div>
+      </footer>
+    </>
   );
 }
