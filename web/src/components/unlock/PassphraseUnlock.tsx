@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { HillsHero } from "@/components/HillsHero";
+import { DeviceSyncPanel } from "@/components/unlock/DeviceSyncPanel";
 import { useSessionStore } from "@/lib/store/session";
 import { unwrapDataEncryptionKey } from "@/lib/crypto";
 import {
@@ -10,8 +11,10 @@ import {
   type KeyMaterialRow,
 } from "@/lib/hooks/useKeyMaterial";
 
+type Mode = "passphrase" | "recovery" | "sync";
+
 export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow }) {
-  const [usingRecovery, setUsingRecovery] = useState(false);
+  const [mode, setMode] = useState<Mode>("passphrase");
   const [secret, setSecret] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,23 +25,35 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
     setSubmitting(true);
     setError(null);
     try {
-      const material = usingRecovery
-        ? recoveryMaterial(keyMaterial)
-        : passphraseMaterial(keyMaterial);
+      const material = mode === "recovery" ? recoveryMaterial(keyMaterial) : passphraseMaterial(keyMaterial);
       const dek = await unwrapDataEncryptionKey(material, secret.trim());
       unlock(dek);
     } catch {
       // AES-GCM auth-tag failure is the only realistic cause here — treat
       // it as "wrong secret," never inspect or surface the raw error.
       setError(
-        usingRecovery
-          ? "That recovery code doesn't match."
-          : "That passphrase doesn't match.",
+        mode === "recovery" ? "That recovery code doesn't match." : "That passphrase doesn't match.",
       );
     } finally {
       setSubmitting(false);
     }
   }
+
+  if (mode === "sync") {
+    return (
+      <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
+        <HillsHero height={60} sunSide="center" />
+        <div className="flex flex-1 flex-col justify-center gap-4 px-5 pb-6">
+          <div className="text-center">
+            <h1 className="text-lg font-bold leading-snug">Sync from another device</h1>
+          </div>
+          <DeviceSyncPanel onBack={() => setMode("passphrase")} />
+        </div>
+      </div>
+    );
+  }
+
+  const usingRecovery = mode === "recovery";
 
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
@@ -73,17 +88,31 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
 
         {error && <p className="text-xs text-warn">{error}</p>}
 
-        <button
-          type="button"
-          onClick={() => {
-            setUsingRecovery((v) => !v);
-            setSecret("");
-            setError(null);
-          }}
-          className="self-start text-[11.5px] font-semibold text-accent"
-        >
-          {usingRecovery ? "Use my passphrase instead" : "Forgot your passphrase?"}
-        </button>
+        <div className="flex flex-col items-start gap-2">
+          <button
+            type="button"
+            onClick={() => {
+              setMode(usingRecovery ? "passphrase" : "recovery");
+              setSecret("");
+              setError(null);
+            }}
+            className="text-[11.5px] font-semibold text-accent"
+          >
+            {usingRecovery ? "Use my passphrase instead" : "Forgot your passphrase?"}
+          </button>
+          {!usingRecovery && (
+            <button
+              type="button"
+              onClick={() => {
+                setMode("sync");
+                setError(null);
+              }}
+              className="text-[11.5px] font-semibold text-accent"
+            >
+              Sync from another device instead
+            </button>
+          )}
+        </div>
 
         <div className="flex-1" />
 

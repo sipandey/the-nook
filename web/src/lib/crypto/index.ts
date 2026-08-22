@@ -108,6 +108,26 @@ export async function generateDataEncryptionKey(): Promise<CryptoKey> {
 }
 
 /**
+ * Generic AES-GCM key <-> base64 conversion. Used for the DEK itself (when
+ * handing it to encryptText/decryptText as data, e.g. during device sync —
+ * see src/lib/deviceSync.ts) and for the device-sync "channel key," which
+ * is structurally identical to a DEK (a random AES-256 key) but serves a
+ * different purpose: encrypting one handoff, not the journal.
+ */
+export async function exportKeyToBase64(key: CryptoKey): Promise<string> {
+  const raw = await crypto.subtle.exportKey("raw", key);
+  return toBase64(new Uint8Array(raw));
+}
+
+export async function importKeyFromBase64(base64: string): Promise<CryptoKey> {
+  const raw = fromBase64(base64);
+  return crypto.subtle.importKey("raw", raw, { name: "AES-GCM" }, true, [
+    "encrypt",
+    "decrypt",
+  ]);
+}
+
+/**
  * Wraps the DEK with a KEK derived from a human secret (passphrase or
  * recovery code). Returns everything needed to store server-side and later
  * unwrap — the KEK itself is never stored or transmitted.

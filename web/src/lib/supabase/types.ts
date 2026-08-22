@@ -26,6 +26,7 @@ export type Database = {
       manifestations: LooseTable;
       manifestation_signals: LooseTable;
       notification_prefs: LooseTable;
+      device_sync_sessions: LooseTable;
     };
     Views: Record<string, never>;
     Functions: Record<string, never>;
