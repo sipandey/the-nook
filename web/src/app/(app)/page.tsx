@@ -1,16 +1,16 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { useUser } from "@clerk/nextjs";
 import { useQuery } from "@tanstack/react-query";
 import { HillsHero } from "@/components/HillsHero";
 import { BottomTabBar } from "@/components/BottomTabBar";
 import { MoodDots } from "@/components/MoodDots";
-import { useEntries, type EntryMetadata } from "@/lib/hooks/useEntries";
+import { useEntries } from "@/lib/hooks/useEntries";
+import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { computeStreak } from "@/lib/streak";
 import { useSessionStore } from "@/lib/store/session";
-import { decryptText } from "@/lib/crypto";
 
 function useDailyPrompt() {
   return useQuery({
@@ -22,40 +22,6 @@ function useDailyPrompt() {
     },
     staleTime: Infinity,
   });
-}
-
-/**
- * Decrypts snippets client-side once the DEK is available. Home lives
- * inside src/app/(app)/, which UnlockGate already guarantees means the DEK
- * is in memory by the time this renders — so this always has a key, but it
- * stays a no-op gracefully if that ever changes.
- */
-function useDecryptedSnippets(entries: EntryMetadata[] | undefined, dek: CryptoKey | null) {
-  const [snippets, setSnippets] = useState<Record<string, string>>({});
-
-  useEffect(() => {
-    if (!entries || !dek) return;
-    let cancelled = false;
-
-    Promise.all(
-      entries.map(async (e) => {
-        try {
-          const text = await decryptText({ ciphertext: e.encrypted_content, iv: e.iv }, dek);
-          return [e.id, text] as const;
-        } catch {
-          return [e.id, ""] as const;
-        }
-      }),
-    ).then((pairs) => {
-      if (!cancelled) setSnippets(Object.fromEntries(pairs));
-    });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [entries, dek]);
-
-  return snippets;
 }
 
 function formatDay(iso: string): string {
@@ -75,7 +41,7 @@ export default function Home() {
   );
 
   const recentEntries = useMemo(() => (entries ?? []).slice(0, 3), [entries]);
-  const snippets = useDecryptedSnippets(recentEntries, dek);
+  const snippets = useDecryptedEntries(recentEntries, dek);
 
   const greeting = useMemo(() => {
     const hour = new Date().getHours();
