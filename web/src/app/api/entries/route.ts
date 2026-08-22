@@ -29,6 +29,15 @@ export async function GET(request: Request) {
   return NextResponse.json(data);
 }
 
+/**
+ * Not yet built: after inserting the entry, checking it against the user's
+ * active manifestations (auto_detect = true) and writing rows to
+ * manifestation_signals. That needs the plaintext (this handler never sees
+ * it) and an AI call, so it belongs client-side or in a transient function
+ * the same way playback generation works (docs/ARCHITECTURE.md §6.4) — not
+ * bolted onto this handler. Flagging the gap rather than leaving
+ * manifestations' signal counts looking automatic when they're not yet.
+ */
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
