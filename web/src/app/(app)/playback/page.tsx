@@ -2,10 +2,9 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { HillsHero } from "@/components/HillsHero";
-import { BottomTabBar } from "@/components/BottomTabBar";
+import { MaterialIcon } from "@/components/MaterialIcon";
 import { useEntries } from "@/lib/hooks/useEntries";
-import { periodRange, entriesInRange, moodDirection, topTag, type Period } from "@/lib/period";
+import { periodRange, entriesInRange, topTag, type Period } from "@/lib/period";
 
 const PERIODS: { key: Period; label: string }[] = [
   { key: "week", label: "Week" },
@@ -13,12 +12,35 @@ const PERIODS: { key: Period; label: string }[] = [
   { key: "year", label: "Year" },
 ];
 
-const DIRECTION_LABEL: Record<string, string> = {
-  rising: "Rising",
-  falling: "Dipping",
-  steady: "Steady",
-  unknown: "Not enough data",
+const MOOD_LABEL: Record<number, string> = {
+  1: "Struggling",
+  2: "Low",
+  3: "Steady",
+  4: "Good",
+  5: "Great",
 };
+
+const TABS = [
+  { href: "/", label: "Home", icon: "home" },
+  { href: "/write", label: "Journal", icon: "edit_note" },
+  { href: "/playback", label: "Playback", icon: "play_circle" },
+  { href: "/manifestations", label: "Manifest", icon: "auto_awesome" },
+];
+
+function mostCommonMood(scores: number[]): string | null {
+  if (scores.length === 0) return null;
+  const counts = new Map<number, number>();
+  for (const s of scores) counts.set(s, (counts.get(s) ?? 0) + 1);
+  let best = scores[0];
+  let bestCount = 0;
+  for (const [score, count] of counts) {
+    if (count > bestCount) {
+      best = score;
+      bestCount = count;
+    }
+  }
+  return MOOD_LABEL[best] ?? null;
+}
 
 export default function PlaybackPage() {
   const router = useRouter();
@@ -31,110 +53,158 @@ export default function PlaybackPage() {
     return entriesInRange(entries, start, end);
   }, [entries, selected]);
 
-  const stats = useMemo(
-    () => ({
-      count: periodEntries.length,
-      direction: moodDirection(periodEntries),
-      tag: topTag(periodEntries),
-    }),
+  const tag = topTag(periodEntries);
+  const mostlyMood = useMemo(
+    () => mostCommonMood(periodEntries.filter((e) => e.mood_score != null).map((e) => e.mood_score!)),
     [periodEntries],
   );
+  const hasAnyEntries = (entries ?? []).length > 0;
 
-  const otherPeriods = useMemo(() => {
-    if (!entries) return [];
-    return PERIODS.filter((p) => p.key !== selected).map((p) => {
-      const { start, end } = periodRange(p.key);
-      const list = entriesInRange(entries, start, end);
-      return { ...p, count: list.length };
-    });
-  }, [entries, selected]);
+  if (!isLoading && !hasAnyEntries) {
+    return (
+      <div className="font-editorial-sans bg-surface text-on-surface antialiased min-h-screen relative flex flex-col overflow-hidden">
+        <div className="absolute inset-0 z-0 pointer-events-none flex items-center justify-center">
+          <div className="w-[120vw] h-[120vw] rounded-full bg-surface-container-high opacity-20 blur-3xl" />
+        </div>
 
-  return (
-    <div className="mx-auto flex min-h-screen w-full max-w-md flex-col bg-background">
-      <HillsHero height={52} sunSide="left" />
-      <div className="flex flex-shrink-0 flex-col gap-3 px-4 pt-4 pb-2">
-        <h1 className="text-[17px] font-bold">Playback</h1>
-        <div className="flex rounded-[9px] border-[1.3px] border-border overflow-hidden">
-          {PERIODS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => setSelected(p.key)}
-              className={`flex-1 py-2 text-xs font-semibold ${
-                selected === p.key ? "bg-accent text-white" : "text-muted"
+        <main className="flex-1 flex flex-col items-center justify-center px-container-padding py-stack-gap relative z-10 text-center">
+          <div className="w-full aspect-square max-w-[240px] mb-8 rounded-full overflow-hidden bg-surface-container-low shadow-sm border border-outline-variant/30">
+            {/* eslint-disable-next-line @next/next/no-img-element -- static decorative asset */}
+            <img src="/images/hero-dawn.jpg" alt="" className="object-cover w-full h-full" aria-hidden="true" />
+          </div>
+          <h1 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-primary mb-4">
+            Your story is being woven.
+          </h1>
+          <p className="text-body-lg text-on-surface-variant mb-8 max-w-xs mx-auto">
+            Write a few entries and we&rsquo;ll turn them into a story.
+          </p>
+          <button
+            type="button"
+            onClick={() => router.push("/write")}
+            className="bg-primary text-on-primary hover:bg-surface-tint text-label-sm uppercase tracking-widest px-8 py-4 rounded-full transition-colors shadow-sm flex items-center gap-2"
+          >
+            <MaterialIcon name="edit" size={18} />
+            Start a new entry
+          </button>
+        </main>
+
+        <nav className="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-low flex justify-around items-center px-gutter py-stack-loose pb-safe md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.02)] border-t border-outline-variant/10">
+          {TABS.map((tab) => (
+            <a
+              key={tab.href}
+              href={tab.href}
+              className={`flex flex-col items-center justify-center transition-transform duration-300 active:scale-90 ${
+                tab.href === "/playback"
+                  ? "text-on-primary-container bg-primary-container rounded-full px-4 py-1"
+                  : "text-outline hover:text-primary"
               }`}
             >
-              {p.label}
-            </button>
+              <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} className="mb-1" />
+              <span className="text-label-sm">{tab.label}</span>
+            </a>
           ))}
-        </div>
+        </nav>
       </div>
+    );
+  }
 
-      <main className="flex flex-1 flex-col gap-3 px-4 pb-3">
-        {isLoading && <p className="text-xs text-muted">Loading…</p>}
+  return (
+    <div className="font-editorial-sans bg-inverse-surface text-inverse-on-surface antialiased min-h-screen relative">
+      <main className="min-h-screen pb-32 px-container-padding pt-12">
+        {isLoading && <p className="text-sm text-inverse-on-surface/60">Loading…</p>}
 
-        {!isLoading && (
-          <div className="rounded-xl border border-border bg-accent-soft/40 p-4">
-            <div className="text-[10px] uppercase tracking-wide text-muted">
-              {selected === "week" ? "Last 7 days" : selected === "month" ? "Last 30 days" : "Last 12 months"}
-            </div>
-            <div className="mt-1.5 text-base font-bold">
-              Your {selected} in review
-            </div>
-            <div className="mt-3 flex gap-4">
-              <div>
-                <div className="text-[10px] text-muted">Entries</div>
-                <div className="text-sm font-bold">{stats.count}</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-muted">Mood</div>
-                <div className="text-sm font-bold">{DIRECTION_LABEL[stats.direction]}</div>
-              </div>
-              <div>
-                <div className="text-[10px] text-muted">Top theme</div>
-                <div className="text-sm font-bold">{stats.tag ?? "—"}</div>
-              </div>
-            </div>
-
-            {stats.count > 0 ? (
-              <button
-                type="button"
-                onClick={() => router.push(`/playback/story?period=${selected}`)}
-                className="mt-3.5 flex w-full items-center justify-center gap-1.5 rounded-[9px] bg-accent px-3 py-2.5 text-xs font-semibold text-white"
-              >
-                <svg viewBox="0 0 20 20" width="14" height="14" fill="none" stroke="currentColor" strokeWidth="1.6">
-                  <circle cx="10" cy="10" r="7.5" />
-                  <path d="M8.5 7.2 13 10l-4.5 2.8V7.2z" />
-                </svg>
-                Watch recap
-              </button>
-            ) : (
-              <p className="mt-3.5 text-[11px] text-muted">
-                Write a few entries this {selected} to unlock a recap.
-              </p>
-            )}
-          </div>
-        )}
-
-        {!isLoading && otherPeriods.length > 0 && (
-          <div className="flex flex-col gap-2">
-            <div className="text-[11px] uppercase tracking-wide text-faint">Also see</div>
-            {otherPeriods.map((p) => (
+        <div className="flex justify-center mb-12">
+          <div className="inline-flex bg-inverse-surface border border-outline/30 rounded-full p-1 shadow-sm">
+            {PERIODS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 onClick={() => setSelected(p.key)}
-                className="flex items-center justify-between rounded-[10px] border-[1.2px] border-border bg-surface px-3.5 py-2.5 text-left"
+                className={`px-6 py-2 rounded-full text-label-sm transition-all ${
+                  p.key === selected
+                    ? "bg-primary-container text-on-primary-container"
+                    : "text-inverse-on-surface hover:text-inverse-primary"
+                }`}
               >
-                <span className="text-xs font-semibold">Your {p.label.toLowerCase()}</span>
-                <span className="text-[11px] text-faint">{p.count} entries</span>
+                {p.label}
               </button>
             ))}
           </div>
-        )}
+        </div>
+
+        <section className="flex flex-col items-center text-center space-y-stack-gap max-w-lg mx-auto">
+          <div className="space-y-4">
+            <h2 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-inverse-on-surface">
+              Your Past {PERIODS.find((p) => p.key === selected)?.label}
+            </h2>
+            <p className="text-body-lg text-inverse-on-surface/80 max-w-md mx-auto">
+              A gentle look back at your recent thoughts and moments.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 w-full mt-8">
+            <div className="bg-surface-container-high/10 border border-outline/20 rounded-xl p-6 flex flex-col items-center justify-center space-y-2 backdrop-blur-sm">
+              <MaterialIcon name="book_5" filled className="text-inverse-primary" size={28} />
+              <span className="font-editorial-display text-headline-md text-inverse-on-surface">
+                {periodEntries.length}
+              </span>
+              <span className="text-label-sm text-inverse-on-surface/60 uppercase tracking-wider">Entries</span>
+            </div>
+            <div className="bg-surface-container-high/10 border border-outline/20 rounded-xl p-6 flex flex-col items-center justify-center space-y-2 backdrop-blur-sm">
+              <MaterialIcon name="spa" filled className="text-inverse-primary" size={28} />
+              <span className="font-editorial-display text-headline-md text-inverse-on-surface">
+                {mostlyMood ?? "—"}
+              </span>
+              <span className="text-label-sm text-inverse-on-surface/60 uppercase tracking-wider">Mostly</span>
+            </div>
+            {tag && (
+              <div className="col-span-2 bg-surface-container-high/10 border border-outline/20 rounded-xl p-6 flex flex-row items-center justify-between backdrop-blur-sm">
+                <div className="flex items-center space-x-3">
+                  <MaterialIcon name="psychiatry" filled className="text-inverse-primary" />
+                  <span className="text-body-md text-inverse-on-surface/80">Top Theme</span>
+                </div>
+                <span className="font-editorial-display text-headline-md text-inverse-on-surface">{tag}</span>
+              </div>
+            )}
+          </div>
+
+          <div className="w-full pt-8">
+            <button
+              type="button"
+              onClick={() => periodEntries.length > 0 && router.push(`/playback/story?period=${selected}`)}
+              disabled={periodEntries.length === 0}
+              className="w-full bg-primary-container hover:bg-primary-fixed-dim text-on-primary-container font-editorial-display text-headline-md py-5 rounded-full transition-all transform hover:scale-[1.02] shadow-[0_4px_14px_0_rgba(139,168,142,0.15)] flex items-center justify-center gap-2 disabled:opacity-40 disabled:pointer-events-none"
+            >
+              <MaterialIcon name="play_circle" filled />
+              {periodEntries.length > 0
+                ? `Play Your ${PERIODS.find((p) => p.key === selected)?.label}`
+                : `Write a few entries this ${selected} to unlock a recap`}
+            </button>
+          </div>
+
+          <div className="flex items-center justify-center space-x-1 mt-8 opacity-70">
+            <MaterialIcon name="lock" size={16} />
+            <span className="text-label-sm text-inverse-on-surface">End-to-End Encrypted</span>
+          </div>
+        </section>
       </main>
 
-      <BottomTabBar />
+      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-inverse-surface/90 backdrop-blur-md rounded-t-xl border-t-0 shadow-sm md:hidden">
+        {TABS.map((tab) => (
+          <a
+            key={tab.href}
+            href={tab.href}
+            className={`flex flex-col items-center justify-center transition-all duration-200 ${
+              tab.href === "/playback"
+                ? "bg-primary-container text-on-primary-container rounded-full px-4 py-1"
+                : "text-on-surface-variant hover:text-inverse-primary"
+            }`}
+          >
+            <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} />
+            <span className="text-label-sm mt-1">{tab.label}</span>
+          </a>
+        ))}
+      </nav>
     </div>
   );
 }
