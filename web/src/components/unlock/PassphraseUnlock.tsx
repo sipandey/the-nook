@@ -52,7 +52,7 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
 
   if (mode === "sync") {
     return (
-      <div className="font-editorial-sans bg-background text-on-surface min-h-screen flex flex-col antialiased">
+      <div className="font-editorial-sans bg-background text-on-surface min-h-dvh flex flex-col antialiased">
         <main className="flex-1 flex flex-col justify-center items-center px-container-padding py-stack-gap max-w-lg mx-auto w-full">
           <DeviceSyncPanel onBack={() => switchTo("passphrase")} />
         </main>
@@ -67,7 +67,7 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
   const usingRecovery = mode === "recovery";
 
   return (
-    <div className="font-editorial-sans bg-background text-on-surface min-h-screen flex flex-col antialiased">
+    <div className="font-editorial-sans bg-background text-on-surface min-h-dvh flex flex-col antialiased">
       <main className="flex-1 flex flex-col justify-center items-center px-container-padding py-stack-gap max-w-lg mx-auto w-full text-center">
         <div className="w-16 h-16 rounded-full bg-surface-container-low flex items-center justify-center mb-stack-gap shadow-[0_10px_30px_-10px_rgba(74,101,78,0.08)]">
           <MaterialIcon name={usingRecovery ? "key" : "lock"} size={28} className={usingRecovery ? "text-secondary" : "text-primary"} />

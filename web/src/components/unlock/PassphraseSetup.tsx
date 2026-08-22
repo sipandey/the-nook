@@ -82,7 +82,7 @@ export function PassphraseSetup() {
 
   if (step === "recovery") {
     return (
-      <div className="font-editorial-sans bg-background text-on-background min-h-screen flex flex-col antialiased">
+      <div className="font-editorial-sans bg-background text-on-background min-h-dvh flex flex-col antialiased">
         <main className="flex-grow flex flex-col items-center justify-center px-container-padding py-12 w-full max-w-2xl mx-auto">
           <div className="w-full flex flex-col gap-stack-gap">
             <header className="text-center flex flex-col items-center gap-6">
@@ -171,7 +171,7 @@ export function PassphraseSetup() {
   }
 
   return (
-    <div className="font-editorial-sans bg-background text-on-background min-h-screen flex flex-col items-center justify-center p-container-padding antialiased">
+    <div className="font-editorial-sans bg-background text-on-background min-h-dvh flex flex-col items-center justify-center p-container-padding antialiased">
       <main className="w-full max-w-md mx-auto flex flex-col gap-stack-gap">
         <header className="text-center">
           <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-surface-container-low mb-6 text-primary">

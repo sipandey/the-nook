@@ -74,7 +74,7 @@ export default function OnboardingNotificationsPage() {
   }
 
   return (
-    <div className="font-editorial-sans bg-background text-on-background min-h-screen flex flex-col justify-center items-center p-container-padding antialiased">
+    <div className="font-editorial-sans bg-background text-on-background min-h-dvh flex flex-col justify-center items-center p-container-padding antialiased">
       <main className="w-full max-w-md mx-auto flex flex-col items-center">
         <div className="text-center mb-stack-gap w-full flex flex-col items-center">
           <div className="w-16 h-16 bg-surface-container-low rounded-full flex items-center justify-center mb-6 shadow-sm border border-surface-variant">
