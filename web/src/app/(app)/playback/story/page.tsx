@@ -7,6 +7,7 @@ import { useEntries, type EntryMetadata } from "@/lib/hooks/useEntries";
 import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { usePlaybackNarrative } from "@/lib/hooks/usePlaybackNarrative";
 import { useSessionStore } from "@/lib/store/session";
+import { useTone } from "@/lib/hooks/useTone";
 import {
   periodRange,
   entriesInRange,
@@ -47,6 +48,7 @@ function StoryContent() {
 
   const { data: entries } = useEntries();
   const dek = useSessionStore((s) => s.dek);
+  const { tone } = useTone();
   const narrative = usePlaybackNarrative();
   const startedRef = useRef(false);
   const [index, setIndex] = useState(0);
@@ -81,6 +83,7 @@ function StoryContent() {
 
     narrative.mutate({
       period,
+      tone,
       entryPlaintexts: periodEntries.map((e) => ({
         date: shortDay(e.created_at),
         text: decrypted[e.id] ?? "",

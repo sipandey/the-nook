@@ -55,3 +55,32 @@ export async function POST(request: Request) {
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ ok: true }, { status: 201 });
 }
+
+/**
+ * Changing the journal passphrase. Only the passphrase-wrapped copy of the
+ * DEK is replaced here — the recovery-wrapped copy is untouched, since it
+ * wraps the same DEK with an independent secret (the recovery code) and
+ * stays valid regardless of what the passphrase changes to. The client
+ * already has the DEK in memory (this app is unlocked to reach Settings at
+ * all), so this never needs the *old* passphrase — it just re-wraps the
+ * DEK that's already unwrapped, with a new KEK.
+ */
+export async function PATCH(request: Request) {
+  const { userId } = await auth();
+  if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const { wrappedDek, wrappedDekIv, wrappedDekSalt } = await request.json();
+
+  const supabase = await getSupabaseServerClient();
+  const { error } = await supabase
+    .from("journal_keys")
+    .update({
+      wrapped_dek: wrappedDek,
+      wrapped_dek_iv: wrappedDekIv,
+      wrapped_dek_salt: wrappedDekSalt,
+    })
+    .eq("user_id", userId);
+
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  return NextResponse.json({ ok: true });
+}

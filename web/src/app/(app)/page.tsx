@@ -11,12 +11,14 @@ import { useEntries } from "@/lib/hooks/useEntries";
 import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { computeStreak } from "@/lib/streak";
 import { useSessionStore } from "@/lib/store/session";
+import { useTone } from "@/lib/hooks/useTone";
+import type { Tone } from "@/lib/tone";
 
-function useDailyPrompt() {
+function useDailyPrompt(tone: Tone) {
   return useQuery({
-    queryKey: ["ai", "prompt", new Date().toISOString().slice(0, 10)],
+    queryKey: ["ai", "prompt", tone, new Date().toISOString().slice(0, 10)],
     queryFn: async (): Promise<{ prompt: string; tone: string }> => {
-      const res = await fetch("/api/ai/prompt");
+      const res = await fetch(`/api/ai/prompt?tone=${tone}`);
       if (!res.ok) throw new Error("Failed to load prompt");
       return res.json();
     },
@@ -30,8 +32,9 @@ function formatDay(iso: string): string {
 
 export default function Home() {
   const { user } = useUser();
+  const { tone } = useTone();
   const { data: entries, isLoading: entriesLoading } = useEntries();
-  const { data: promptData, isLoading: promptLoading } = useDailyPrompt();
+  const { data: promptData, isLoading: promptLoading } = useDailyPrompt(tone);
   const dek = useSessionStore((s) => s.dek);
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
 

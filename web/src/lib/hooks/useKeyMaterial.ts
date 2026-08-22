@@ -7,6 +7,7 @@ import type { WrappedKeyMaterial } from "@/lib/crypto";
  *  matching the Postgres columns directly (see 0001_init.sql / 0002). */
 export interface KeyMaterialRow {
   user_id: string;
+  created_at: string;
   wrapped_dek: string;
   wrapped_dek_iv: string;
   wrapped_dek_salt: string;
