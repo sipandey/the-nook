@@ -14,6 +14,7 @@
  */
 
 import { argon2id } from "hash-wasm";
+import { RECOVERY_WORDLIST } from "./wordlist";
 
 const AES_KEY_LENGTH = 256;
 const GCM_IV_BYTES = 12;
@@ -224,15 +225,29 @@ export async function decryptText(
 // Recovery code
 // ---------------------------------------------------------------------------
 
-/** Generates a human-writable recovery code, e.g. "XKPQ-7RTN-4LWD-9VCM". */
+const RECOVERY_PHRASE_LENGTH = 12;
+
+/**
+ * Generates a human-writable recovery phrase, e.g. "ocean velvet prism
+ * silent quartz dawn echo lunar timber silver ember bloom" — 12 words from
+ * a 256-word list, ~96 bits of entropy. Easier to transcribe by hand and
+ * harder to mistype than a mixed-case alphanumeric code; the underlying
+ * security mechanism is unchanged, it's just a different string fed into
+ * the same Argon2id derivation in deriveKeyEncryptionKey().
+ */
 export function generateRecoveryCode(): string {
-  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // no 0/O/1/I
-  const groups: string[] = [];
-  for (let g = 0; g < 4; g++) {
-    let group = "";
-    const bytes = randomBytes(4);
-    for (let i = 0; i < 4; i++) group += alphabet[bytes[i] % alphabet.length];
-    groups.push(group);
+  if (RECOVERY_WORDLIST.length !== 256) {
+    // Would silently weaken entropy per word if this list ever drifted —
+    // fail loudly instead.
+    throw new Error(
+      `RECOVERY_WORDLIST must have exactly 256 entries, has ${RECOVERY_WORDLIST.length}`,
+    );
   }
-  return groups.join("-");
+
+  const bytes = randomBytes(RECOVERY_PHRASE_LENGTH);
+  const words: string[] = [];
+  for (let i = 0; i < RECOVERY_PHRASE_LENGTH; i++) {
+    words.push(RECOVERY_WORDLIST[bytes[i] % 256]);
+  }
+  return words.join(" ");
 }
