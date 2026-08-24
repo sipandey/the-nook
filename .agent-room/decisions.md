@@ -613,3 +613,53 @@ check in this repo.
 `npm install`) against the exact committed lockfile — before trusting any of this
 in GitHub Actions, not just each command in isolation.
 
+### 2026-08-24 — NK-03: real Supabase types, generated locally via Docker — no login needed
+
+**Decision:** Replaced `src/lib/supabase/types.ts`'s loose placeholder with real
+generated types. `web/README.md`'s own setup instructions said this needed the CLI
+authenticated against the linked hosted project (`--project-id <id>`) — turned out
+unnecessary: `supabase gen types` also has a `--local` mode that reads a local
+Docker Postgres instance instead, and `supabase start` builds that local instance by
+replaying `supabase/migrations/*.sql` from a stopped state, which requires no
+`supabase login`/access token at all. Ran `supabase init` (committing the resulting
+`supabase/config.toml` and `supabase/.gitignore`) → `supabase start` (Docker,
+confirmed running) → `supabase gen types typescript --local` → `supabase stop`.
+Diffed the 8 generated tables against the 8 `create table` statements across the
+migrations — exact match, including the RLS helper function
+(`requesting_user_id`) and every foreign key relationship. Re-ran the full CI
+sequence (typecheck, lint, `npm test`, build) against the real types — all clean,
+meaning the loose placeholder hadn't been silently masking any real mismatch
+between the query builder calls across the codebase and the actual schema.
+**Why:** Roadmap item NK-03 — the placeholder traded away compile-time column
+checking on every Supabase query builder call in the app, the last open item in
+Phase 0 (Integrity).
+**A real mistake caught mid-task, not just narrated:** first attempt at `npx
+supabase@2.115.0 --version` printed `6.14.12` and `gen types --help` produced
+garbled, unrelated output (`readlink: illegal option`, references to a
+`~/.gen/config` file) — because it ran without `nvm use 22.20.0` first, so npx
+resolved everything under the sandbox's default Node v10.24.1 (`npm root -g`
+pointed at the v10.24.1 tree), not the real Supabase CLI. This is the exact
+"unusable default Node" trap this whole multi-session build has hit repeatedly —
+now genuinely harder to hit again since NK-04 added `web/.nvmrc`, but still
+possible for any command run outside `web/` or without sourcing nvm first.
+**A second real mistake, caught before it shipped:** `supabase start` drops
+vendored, minified Edge Runtime JS into `supabase/.temp/` — gitignored, but
+ESLint doesn't read a nested `.gitignore` and has its own ignore list, so `npm run
+lint` picked it up and reported 182 errors that had nothing to do with this
+change (`no-var`, `prefer-const` against auto-generated single-line minified
+code). Added `supabase/.temp/**` to `eslint.config.mjs`'s `globalIgnores` — a
+real, generalizable fix, not just a one-time cleanup, since anyone who runs
+`supabase start` locally after this would hit the same false-positive lint
+failure otherwise.
+**Left as a stated, not hidden, limitation:** because the local instance's schema
+comes only from replaying the committed migrations, this can't detect drift from
+a manual change made directly in the hosted project's dashboard (bypassing
+migrations entirely) — noted explicitly in the new file's header comment, with
+the `--linked`/`--project-id` regeneration path documented in `web/README.md` for
+whoever eventually links the real project.
+**Committed:** `supabase/config.toml` and `supabase/.gitignore` (from `supabase
+init` — needed by any future `supabase start --local`, including CI if that's
+ever added) alongside the regenerated types and the eslint config fix. Did not
+commit `supabase/.temp/`, `.branches/`, or `snippets/` — ephemeral CLI runtime
+state, cleaned up after `supabase stop` rather than left in the working tree.
+

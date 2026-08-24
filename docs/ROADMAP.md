@@ -2,11 +2,11 @@
 
 Status: assessed 2026-08-24 against `main` @ `fe19e8a`.
 
-**Since assessed:** NK-01 (composer draft persistence), NK-02 (crypto tests), NK-04
-(CI), and NK-05 (lint errors) shipped — Phase 0 is now closed except NK-03 (real
-Supabase types). §1's table below is left as-is rather than rewritten, since it's an
-honest record of state at assessment time; §3's backlog rows and §6's checklist are
-the current-status source of truth.
+**Since assessed:** NK-01 through NK-05 all shipped — **Phase 0 (Integrity) is
+closed.** §1's table below is left as-is rather than rewritten, since it's an honest
+record of state at assessment time; §3's backlog rows and §6's checklist are the
+current-status source of truth. Next up: Phase 1 (deliver the advertised product —
+PWA, reminders), starting with NK-07/NK-08.
 
 This document is a reading of **state** — what is actually true of the build right
 now, and what to do about it in what order. [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -109,7 +109,7 @@ two · **L** multi-day with design thinking attached.
 |---|---|---|---|---|
 | NK-01 | ~~Blocker~~ Done | Composer draft persistence | Shipped: `src/lib/composer/draftStore.ts` + `src/lib/hooks/useComposerDraft.ts`. Debounced autosave (800ms) plus an immediate flush on `visibilitychange`, encrypted with the DEK before it touches IndexedDB, restored on mount with a dismissible banner. | M |
 | NK-02 | Done | Test suite for `lib/crypto/` | `src/lib/crypto/index.test.ts` (Vitest, 14 tests): encrypt/decrypt round-trip, DEK wrap/unwrap under both passphrase and recovery code, tamper/wrong-key/wrong-passphrase/wrong-salt rejection, export/import round-trip — each failure-mode assertion verified to actually fail red against a deliberately broken source before being trusted. Now enforced in CI by NK-04. | M |
-| NK-03 | Blocker | Generate real Supabase types | `src/lib/supabase/types.ts` is still the loose placeholder — no compile-time column checking anywhere. Needs Docker + project link (see `web/README.md` setup step 3). | S |
+| NK-03 | Done | Generate real Supabase types | `src/lib/supabase/types.ts` replaced. Didn't need a linked project or login token after all — `supabase init && supabase start` (Docker, confirmed available) spins up a local Postgres built purely from replaying `supabase/migrations/*.sql`, and `supabase gen types typescript --local` generates against that. Full CI sequence (typecheck/lint/test/build) re-verified clean against the real, strict types — no hidden mismatches the loose placeholder had been masking. Regenerating against the real hosted project once linked would still close a theoretical drift gap (a manual dashboard schema change the migrations don't know about); see the file's own header comment. | S |
 | NK-04 | Done | CI that builds the app | `.github/workflows/app-ci.yml`: typecheck (`next typegen && tsc --noEmit` — the bare `tsc` needs `.next/types`, which only a build or `next typegen` produces), lint, `npm test`, then `next build`, on every push/PR to `main`. Node version pinned via `web/.nvmrc` (22.20.0), read by `setup-node` — this repo had no pinned version anywhere before. `next build` needs a dummy `OPENAI_API_KEY` to get past module-scope `new OpenAI(...)` in the three `/api/ai/*` routes; verified Clerk/Supabase keys are NOT required at build time by building with a fully empty environment first. | S |
 | NK-05 | Done | Fix standing lint errors | Both `<a>`-instead-of-`<Link>` errors (sign-in/sign-up) fixed — turned out to be a hard prerequisite for NK-04, not a separate follow-up: `npm run lint` genuinely exits 1 on these, so wiring lint into CI without fixing them first would have shipped CI red from the first run. | XS |
 | NK-06 | Blocker | Production error monitoring | No visibility into production failures at all. A crash in unlock or decrypt is silent today. Must exclude entry content from payloads. | S |
@@ -204,4 +204,4 @@ that contradicts its own marketing copy.
 - [ ] **Failures are visible.** Production errors reach you without a user reporting them.
 - [ ] **It installs.** Home-screen install works on iOS and Android; the shell opens offline.
 - [ ] **Reminders arrive.** An opted-in user receives a real scheduled push on a real device.
-- [ ] **The data layer is typed.** Generated Supabase types, not the placeholder.
+- [x] **The data layer is typed.** Generated Supabase types, not the placeholder.
