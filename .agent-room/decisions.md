@@ -532,3 +532,41 @@ Also rejected: silently restoring without any banner — considered, but a compo
 can silently repopulate with old text without explanation is confusing in exactly the
 way NK-01 exists to prevent trust erosion, not just data loss.
 
+### 2026-08-24 — NK-02: test suite for lib/crypto/, on Vitest
+
+**Decision:** Added Vitest as the project's first test runner (`vitest.config.mts`,
+`"node"` environment — no jsdom, since Node 22's global WebCrypto/`btoa`/`atob` cover
+everything a pure-module test needs) and wrote `src/lib/crypto/index.test.ts`: 14
+tests covering encrypt/decrypt round-trip (including unicode and empty string), fresh-IV-per-call,
+tampered-ciphertext rejection, wrong-key rejection, mismatched-IV rejection, DEK
+wrap/unwrap round-trip under both a passphrase and an independently-generated
+recovery code (proving the dual-backup-path property, not just that unwrap works
+once), wrong-passphrase rejection, wrong-salt rejection, export/import round-trip,
+and `generateRecoveryCode`/`generateSalt`'s shape and randomness. Every "should
+throw" assertion was verified to actually go red first: temporarily mutated
+`deriveKeyEncryptionKey` to ignore its `secret` parameter, confirmed exactly the
+"rejects unwrapping with the wrong passphrase" test failed (and only that one), then
+restored the file from a backup and diffed it byte-identical before moving on — a
+test suite is only as trustworthy as its failure modes, not just its passes.
+**Why:** Roadmap item NK-02 (docs/ROADMAP.md) — `src/lib/crypto/` carries this
+product's entire privacy claim ("technically unreadable to us") and had zero test
+coverage anywhere in the repo, the sharpest of the three contradictions §1 of the
+roadmap opens with.
+**Chose Vitest over Node's built-in test runner:** `node:test` would mean zero new
+dependencies, but Node 22's native TypeScript support (`--experimental-strip-types`)
+doesn't resolve this repo's `@/*` path alias and is still experimental; Vitest's ESM/TS
+support is first-class, config is ~15 lines, and it's the standard pairing for a
+Vite-adjacent TS project — a better foundation for the component/hook tests this repo
+will eventually need, not just this one file.
+**Deliberately not tested:** Argon2id's internal tuning constants (iterations,
+memory cost) — they aren't exported, and reaching into the module's private state to
+assert on them would couple the test to an implementation detail a legitimate future
+retune could change for good reason. Tested instead: the property that actually
+matters, that derivation is a pure function of (secret, salt) — same pair always
+works, changing either one doesn't (the wrong-salt test exists specifically to prove
+salt is load-bearing, not decorative).
+**Not yet done:** CI doesn't run `npm test` — that's NK-04's job, updated to say so
+explicitly. A test suite nothing runs on a PR isn't actually a safety net yet; the
+ROADMAP.md checklist item ("Crypto is tested... pass in CI") is deliberately left
+unchecked until that lands.
+

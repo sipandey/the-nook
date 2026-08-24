@@ -6,7 +6,7 @@ Visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact/36d6
 
 ## Stack
 
-Next.js (App Router, TS) · Tailwind · Clerk (auth) · Supabase (Postgres + RLS) · OpenAI (GPT-4o-mini + Whisper) · Zustand + TanStack Query · Serwist (PWA, installed but not yet wired) · `qrcode` (device-sync QR generation)
+Next.js (App Router, TS) · Tailwind · Clerk (auth) · Supabase (Postgres + RLS) · OpenAI (GPT-4o-mini + Whisper) · Zustand + TanStack Query · Serwist (PWA, installed but not yet wired) · `qrcode` (device-sync QR generation) · Vitest (unit tests)
 
 ## Setup
 
@@ -22,6 +22,19 @@ cp .env.example .env.local   # fill in Clerk / Supabase / OpenAI keys
 ```bash
 npm run dev
 ```
+
+## Testing
+
+```bash
+npm test
+```
+
+`src/lib/crypto/index.test.ts` (Vitest, "node" environment — Node 22's global
+WebCrypto covers everything this needs without a jsdom shim) is the only suite so
+far: encrypt/decrypt round-trip, DEK wrap/unwrap under both the passphrase and the
+recovery-code path, and that tampered ciphertext / wrong key / wrong passphrase /
+wrong salt all actually fail rather than silently succeeding. Not yet wired into CI
+(`docs/ROADMAP.md` NK-04) — run it locally before touching `src/lib/crypto/`.
 
 ## What's built
 
