@@ -260,3 +260,35 @@ unnecessary complexity: search results are always intersected with the live entr
 list before rendering, so a stale vector for a deleted entry can never surface, it's
 just inert until the next full index clear.
 
+### 2026-08-24 — Playback narrative cache: same encrypt-before-storage posture as search
+
+**Decision:** Added `src/lib/playback/narrativeCache.ts` — an IndexedDB store, one
+database per user, keyed by a SHA-256 hash of `(period, tone, sorted entry ids)` — and
+wired it into `usePlaybackNarrative`: check cache before calling `/api/ai/playback`,
+write to cache after a successful generation. The narrative is `encryptText`/
+`decryptText`'d with the DEK before it ever touches IndexedDB, matching
+`vectorStore.ts`'s posture exactly. Also changed `usePlaybackNarrative` so preview mode
+(`src/lib/preview.ts`) routes through the real cache-check/decrypt/encrypt path around
+its fixture narrative instead of short-circuiting past it entirely — mirrors
+`useSemanticSearch`'s `PREVIEW_MODE ? "preview-user" : ...` pattern. Verified live: the
+IndexedDB store held exactly one AES-GCM-encrypted entry (not plaintext JSON) after a
+first visit to a story, reused that same entry (still exactly one key) on a reload of
+the same period, and produced a second, distinct key when the period changed — cache
+hit, cache miss, and key derivation all confirmed working, not just built.
+**Why:** `PlaybackNarrative.highlightQuote` is a verbatim quote lifted from a real
+entry, not an abstract vector — if anything more sensitive than a search embedding, and
+squarely what `docs/ARCHITECTURE.md` §5 point 2 already calls out ("AI-generated output
+derived from plaintext is itself sensitive... does not get a free pass just because the
+AI produced it"). Treating it as encryption-optional would have been inconsistent with
+the search cache built earlier this session. Making preview mode exercise the real path
+rather than bypass it was necessary to actually verify the cache functions in a browser
+at all — `getPreviewPlaybackNarrative()` is synchronous and would otherwise return
+before the mutationFn ever reached the cache-check code.
+**Rejected:** A server-side cross-device cache (`playback_cache` Supabase table,
+mentioned as a follow-up in §10.2) — out of scope for the client-side cost win this was
+built for; each device now builds its own cache independently, an accepted gap
+documented in §10.2, same shape as §10.6.8's multi-device search limitation. Skipping
+encryption on the grounds that IndexedDB is local-only and never touches the network —
+rejected per the "Why" above; local-only doesn't mean not sensitive, per the same
+reasoning already established for vectorStore.ts.
+

@@ -379,7 +379,7 @@ Full visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact
 
 ## 10. AI cost optimization & semantic search
 
-Status: **implemented**, except the playback narrative client-side cache (§10.5 step 4, still a proposal). Daily-prompt cache (§10.2), AI rate limiting/usage logging (§10.6.3), the embedding-quality spike (§10.5 step 3), and semantic search itself (§10.3–§10.4, `/search`) are all built. This section is written to the same standard as the rest of this document — it should be treated as the source of truth for intent once any part of it starts landing, and updated (not left to drift) as pieces ship.
+Status: **implemented in full.** Every item in §10.5's sequencing is built: daily-prompt cache (§10.2), AI rate limiting/usage logging (§10.6.3), the embedding-quality spike (§10.5 step 3), semantic search (§10.3–§10.4, `/search`), and the playback narrative client-side cache (§10.2). This section is written to the same standard as the rest of this document — it should be treated as the source of truth for intent once any part of it starts landing, and updated (not left to drift) as pieces ship.
 
 ### 10.1 Current AI call inventory
 
@@ -423,7 +423,7 @@ Collapses N users/day to ≤4 OpenAI calls/day. `cache_date` is the UTC calendar
 
 **This caching is only valid because the prompt is unpersonalized** — the moment `recentEntrySummaries` is wired up, output becomes per-user and falls under the re-encrypt-before-persisting rule in §5, point 2, and this whole cache design must be revisited.
 
-**Playback narrative.** No caching exists; every "Play Your Week" tap re-generates, even for an unchanged period. Entries have no update path (§10.6.2) — the only route for an entry ID is `DELETE`, no `PATCH` — so a cache key of the sorted entry ID set alone (no content-hash or `updated_at` needed) is sufficient and stable. Client-side cache (IndexedDB, keyed by `hash(entry ids, tone)`) is the low-risk version: zero new infrastructure, and it's the client's own already-decrypted data. A cross-device version (small `playback_cache` table storing `(encrypted_narrative, iv)` per §6.4's existing "opt" note) is a real follow-up but not necessary for the cost win.
+**Playback narrative — implemented.** Previously every "Play Your Week" tap re-generated the narrative, even for an unchanged period. `src/lib/playback/narrativeCache.ts` fixes this: entries have no update path (§10.6.2) — the only route for an entry ID is `DELETE`, no `PATCH` — so a cache key hashed from `(period, tone, sorted entry ids)` is stable with no `updated_at`/content-hash component needed. Implemented as a client-side IndexedDB cache (one database per user), the low-risk version called for here: zero new infrastructure, operating on the client's own already-decrypted data. Vectors — in this case the narrative JSON — are AES-GCM-encrypted with the DEK before ever touching IndexedDB, same posture and same reasoning as the search vector cache (§10.6.6): a verbatim quote lifted from an entry (`PlaybackNarrative.highlightQuote`) is exactly the kind of AI-output-derived-from-plaintext §5 point 2 already flags as sensitive. A cross-device version (a small `playback_cache` Supabase table storing `(encrypted_narrative, iv)` per §6.4's existing "opt" note) remains a real, un-built follow-up — each device currently builds its own cache independently, same accepted-gap shape as §10.6.8's multi-device search limitation.
 
 **Signal detection.** Already skips the call entirely with zero active manifestations. The remaining lever isn't caching — see §10.6.4 (uncapped entry length).
 
@@ -471,7 +471,7 @@ Option A. It is the only option with zero incremental OpenAI cost, the only one 
 1. **Daily prompt cache** — done (§10.2). Smallest change, real savings starting day one, no encryption questions.
 2. **Rate limiting + usage logging on all four `/api/ai/*` routes** (§10.6.3) — done.
 3. **Spike: in-browser embedding quality** — done, result is **go**. `docs/spikes/embedding-quality/RESULTS.md`: `Xenova/all-MiniLM-L12-v2` hit 100% top-3 retrieval on 12 deliberately vocabulary-disjoint test queries against 20 realistic journal entries. Validates option A (§10.3/§10.4) over falling back to OpenAI embeddings.
-4. **Playback narrative client-side cache** — nice-to-have, lower urgency than the above.
+4. **Playback narrative client-side cache** — done. `src/lib/playback/narrativeCache.ts`, wired into `usePlaybackNarrative`.
 5. **Semantic search UI** — done. `/search`, entry point from the Journal list. Built against `all-MiniLM-L12-v2` in a Web Worker (`src/lib/search/embed.worker.ts`), lazy-loaded only on explicit opt-in (§10.6.7), encrypted vector cache in IndexedDB via the DEK (§10.6.6, `src/lib/search/vectorStore.ts`).
 
 ### 10.6 Critical review & open risks
