@@ -21,6 +21,9 @@
  * Regenerated 2026-08-24 for 0006_push_subscriptions.sql (NK-09) — same
  * process (`supabase db reset` this time, since a stale `supabase start`
  * had restored from a snapshot that predated the new migration).
+ *
+ * Regenerated again 2026-08-24 for 0007_daily_reminder_tracking.sql
+ * (NK-10) — same `supabase db reset` process.
  */
 
 export type Json =
@@ -266,6 +269,7 @@ export type Database = {
       notification_prefs: {
         Row: {
           daily_prompt_enabled: boolean
+          daily_prompt_last_sent_date: string | null
           daily_prompt_time: string
           manifestation_enabled: boolean
           playback_ready_enabled: boolean
@@ -274,6 +278,7 @@ export type Database = {
         }
         Insert: {
           daily_prompt_enabled?: boolean
+          daily_prompt_last_sent_date?: string | null
           daily_prompt_time?: string
           manifestation_enabled?: boolean
           playback_ready_enabled?: boolean
@@ -282,6 +287,7 @@ export type Database = {
         }
         Update: {
           daily_prompt_enabled?: boolean
+          daily_prompt_last_sent_date?: string | null
           daily_prompt_time?: string
           manifestation_enabled?: boolean
           playback_ready_enabled?: boolean

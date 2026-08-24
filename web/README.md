@@ -6,7 +6,7 @@ Visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact/36d6
 
 ## Stack
 
-Next.js (App Router, TS) · Tailwind · Clerk (auth) · Supabase (Postgres + RLS) · OpenAI (GPT-4o-mini + Whisper) · Zustand + TanStack Query · Serwist (PWA, installed but not yet wired) · `qrcode` (device-sync QR generation) · Vitest (unit tests)
+Next.js (App Router, TS) · Tailwind · Clerk (auth) · Supabase (Postgres + RLS) · OpenAI (GPT-4o-mini + Whisper) · Zustand + TanStack Query · Serwist (PWA + service worker, registered) · `web-push` (VAPID push notifications) · Vercel Cron (daily reminder) · `qrcode` (device-sync QR generation) · Vitest (unit tests)
 
 ## Setup
 
@@ -20,8 +20,9 @@ npm install
 cp .env.example .env.local   # fill in Clerk / Supabase / OpenAI keys
 ```
 
-1. Create a Supabase project, then apply the migrations in `supabase/migrations/` **in order** (`0001_init.sql`, `0002_ciphertext_as_text.sql`, `0003_device_sync.sql`, `0004_prompt_cache.sql`, `0005_ai_usage_log.sql`) — either paste each into the SQL Editor, or `psql`/the Supabase CLI against your connection string.
+1. Create a Supabase project, then apply the migrations in `supabase/migrations/` **in order** (`0001` through `0008` — see the directory for the full, current list) — either paste each into the SQL Editor, or `psql`/the Supabase CLI against your connection string.
 2. In Supabase → Authentication → Sign In / Providers, add Clerk as a third-party auth provider — the RLS policies key off the Clerk user ID inside the verified JWT (`auth.jwt()->>'sub'`), so this step isn't optional.
+3. For the daily-reminder cron (`src/app/api/cron/daily-reminder/route.ts`), fill in three more `.env.local` values: `SUPABASE_SERVICE_ROLE_KEY` (Settings → API in the Supabase dashboard — the cron route has no per-request user session to scope a normal client to, so it's the one place in the app that uses this instead of the RLS-scoped client), `NEXT_PUBLIC_VAPID_PUBLIC_KEY`/`VAPID_PRIVATE_KEY` (`npx web-push generate-vapid-keys`), and `CRON_SECRET` (any random string ≥16 characters — set the same value in Vercel's project settings so Vercel's own cron invocations authenticate correctly; see [`.env.example`](.env.example)).
 
 `src/lib/supabase/types.ts` is already checked in with real generated types (`supabase gen types typescript --local`, against a local Docker Postgres built by replaying the migrations above — see the file's own header). Regenerate it after any new migration, or once you've `supabase link`ed this repo to your own hosted project, with:
 
@@ -72,13 +73,14 @@ Every screen in the design canvas is wired to real data — Clerk auth, Supabase
 - **Manifestations** (`src/app/(app)/manifestations/`) — CRUD with category/cadence/auto-detect, and **automatic signal detection**: after each entry saves, it's classified against your active manifestations in the background and matches get recorded — conservatively, so the signal count means something.
 - **Settings** (`src/app/(app)/settings/`) — AI tone (stored in Clerk's `unsafeMetadata`, used everywhere prompts are generated), privacy/encryption info, passphrase change, notification preferences (wired to the schema), data export (client-side decrypt + JSON download), full account deletion (Supabase data + Clerk account, in that order), Clerk's account management UI.
 - **Smart Search** (`src/app/(app)/search/`, `src/lib/search/`) — opt-in semantic search over your journal, entirely client-side: entries are embedded on-device (`Xenova/all-MiniLM-L12-v2`, in a Web Worker) and the resulting vectors are encrypted with the DEK before being cached in IndexedDB. No server round trip, no OpenAI call — see `docs/ARCHITECTURE.md` §10.3/§10.4 and the quality spike at `docs/spikes/embedding-quality/`.
+- **PWA & push notifications** (`src/app/sw.ts`, `src/app/serwist/`, `src/lib/hooks/usePushSubscription.ts`, `src/app/api/cron/daily-reminder/`) — service worker registered site-wide with app-shell caching and an on-brand `/~offline` fallback (confirmed live: server killed, a previously-visited page stayed available, a never-visited one fell back correctly); Web Push subscribe/unsubscribe wired into onboarding and Settings; a Vercel Cron job sends the daily reminder once a day, idempotently, to every device a user has subscribed on. Notification bodies are always generic, decided deliberately — see `docs/ARCHITECTURE.md` §8.
 
 ## Known gaps (flagged deliberately, not forgotten)
 
-- **PWA not fully wired** — Serwist is installed but no service worker is registered yet, so there's no offline app-shell caching and no Web Push subscription flow. The app works as a normal web app today, not yet an installable/offline one.
-- **Vercel Cron for the daily reminder** isn't configured — `notification_prefs` stores the preference, nothing triggers the push yet.
-- **Notification content richness vs. lock-screen privacy** — still an open product decision (generic push text vs. the richer previews in the original mockup).
 - **Live-streaming voice transcription** — deliberately not built. Batch transcription (record → Whisper on "Done") was judged good enough; true live transcription would need OpenAI's Realtime API, a materially bigger swap.
+- **Live push delivery to a real device is unverified** — the subscribe flow and the cron send route are both built and independently verified (real network round-trips, no mocks), but granting notification permission needs a genuine human click; no browser automation, in any browser, can satisfy that gate by design. One click closes this out.
+- **The daily reminder ignores each user's chosen `daily_prompt_time`** — it sends to everyone at one fixed UTC time instead. Vercel's Hobby plan only allows cron jobs to run once per day (confirmed against Vercel's current docs), which makes true per-user scheduling impossible without a paid plan — a stated tradeoff, not an oversight.
+- **Playback-ready and manifestation-resurfaced notifications have no send trigger** — their toggles exist in `notification_prefs`/Settings, but nothing sends a push for either type yet. The daily-reminder cron is scoped to exactly that: the daily reminder.
 
 ## A rule worth keeping visible
 

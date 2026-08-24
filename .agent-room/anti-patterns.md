@@ -21,6 +21,32 @@ Append a new entry every time:
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-08-24 — Overriding a `NEXT_PUBLIC_*` env var at `next start` time silently does nothing
+
+**What happened:** While verifying NK-10's cron route against a local Supabase
+stack, tried to point `NEXT_PUBLIC_SUPABASE_URL` at `http://127.0.0.1:54321`
+by setting it only when running `next start` (first via inline shell env vars,
+then via `node --env-file=...` after suspecting shell-escaping corruption of
+the long JWT service-role key). Neither worked — the app kept talking to the
+real hosted Supabase project. A route that used a *non*-`NEXT_PUBLIC_` var
+(`CRON_SECRET`, read at request time) picked up the override correctly in the
+exact same run, which is what made the contradiction obvious enough to chase
+down instead of assuming a shell-quoting bug.
+**Root cause:** Next.js inlines `NEXT_PUBLIC_*` variables at *build* time —
+via static replacement in the compiled output — everywhere, including
+server-only Route Handler code, not just client bundles. The value baked in
+during `next build` is permanent for that build artifact; no environment
+variable set at `next start` (or any runtime) can change it afterward, no
+matter how correctly it's passed.
+**Avoid:** To point a build at different `NEXT_PUBLIC_*` values (e.g. testing
+against a local Supabase stack instead of the real project), the override has
+to be present at *build* time — rebuild with the value exported in the
+build's own shell environment. Setting it only for `next start`, by any
+mechanism, is a silent no-op. If a `NEXT_PUBLIC_*` override appears to have no
+effect, check this before suspecting anything else (shell escaping, caching,
+`.env.local` precedence) — a same-run comparison against a plain server-only
+var is the fastest way to confirm it's this and not something else.
+
 ### 2026-08-24 — Notification permission prompts can't be granted via browser automation, ever — don't retry
 
 **What happened:** While verifying NK-09 (Web Push subscription), tried to get

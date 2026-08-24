@@ -14,6 +14,13 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/sso-callback(.*)",
   "/api/webhooks(.*)",
+  // Vercel Cron invocations (docs/ROADMAP.md NK-10) carry no Clerk
+  // session — without this, auth.protect() would redirect every cron
+  // trigger to /sign-in before it ever reached the route's own
+  // CRON_SECRET check, and the job would silently never run in
+  // production. Caught by testing the route directly rather than
+  // trusting the CRON_SECRET check alone; see .agent-room/decisions.md.
+  "/api/cron(.*)",
   // Marketing/legal pages — no journal content, no reason to require a
   // session. See src/components/PublicPageChrome.tsx.
   "/about",

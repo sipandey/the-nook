@@ -1,0 +1,22 @@
+-- Explicit service_role grants — see docs/ROADMAP.md NK-10.
+--
+-- Discovered while testing the daily-reminder cron against a local
+-- Docker instance: the service_role key was valid (correctly resolved
+-- to the service_role Postgres role) but every query still failed with
+-- "permission denied", on every table, not just the ones this migration
+-- adds. BYPASSRLS (which service_role has by default) only skips RLS
+-- *policies* — it doesn't grant the underlying SQL privileges a role
+-- needs to touch a table at all. Supabase's hosted platform provisions
+-- those baseline grants automatically as part of creating a new project;
+-- the CLI's local instance, built purely by replaying this repo's own
+-- migrations, does not. Rather than assume the hosted project already
+-- has them (unverified — no access to check), grant explicitly so
+-- correctness doesn't depend on which environment ran the provisioning.
+--
+-- Scoped to exactly what src/app/api/cron/daily-reminder/route.ts does —
+-- the only place in the app that uses the service-role client — not a
+-- blanket grant across the schema. It reads/advances
+-- notification_prefs.daily_prompt_last_sent_date and reads/prunes stale
+-- rows from push_subscriptions; nothing else.
+grant select, update on notification_prefs to service_role;
+grant select, delete on push_subscriptions to service_role;

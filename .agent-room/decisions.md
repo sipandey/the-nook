@@ -823,3 +823,92 @@ resulting subscription and the real VAPID keys already in `.env.local` would
 confirm live delivery — that verification step is still open, not attempted,
 because there's no subscription to test against yet without that human click.
 
+### 2026-08-24 — NK-10: daily-reminder cron, scoped to exactly "daily reminder"
+
+**Decision:** Built `vercel.json` (one cron, `0 20 * * *`) and
+`/api/cron/daily-reminder`: `CRON_SECRET`-authenticated (Vercel's own
+documented pattern — automatically sent as `Authorization: Bearer
+<CRON_SECRET>` when Vercel invokes the job), idempotent (a new
+`notification_prefs.daily_prompt_last_sent_date` column — added
+`0007_daily_reminder_tracking.sql` — since Vercel's own cron docs warn
+delivery can duplicate or miss invocations, not something to discover in
+production), fans out to every `push_subscriptions` row for a user (not
+just one — a user can have several devices), and prunes a subscription on
+a 404/410 send response the way `web-push`'s own documented convention
+expects. Added a `getSupabaseServiceRoleClient()` alongside the existing
+request-scoped one in `src/lib/supabase/server.ts` — the cron route has no
+per-request Clerk session to scope a normal client to, since its entire
+job is reading across *every* user's prefs and subscriptions, which a
+user-token-scoped client structurally cannot do. Documented as the one
+sanctioned exception to "never bypass RLS," restricted to exactly this one
+route.
+**Why:** Roadmap item NK-10 — the actual trigger behind the reminder
+feature; `notification_prefs` already stored the preference and NK-09
+already stored subscriptions, nothing sent anything.
+**Deliberately narrow scope, stated explicitly, not implied:** this route
+only ever sends the daily-prompt reminder. `playback_ready` and
+`manifestation` both have toggles in `notification_prefs`/Settings but
+have no send trigger anywhere in the app — real, separate, unbuilt work
+(manifestation-signal push in particular would need to hook into
+`/api/manifestation-signals`' detection flow, a different code path
+entirely). Not doing that here would have silently made NK-10 look like
+"notifications are done" when two of three types still do nothing.
+**A real, load-bearing platform constraint, checked before designing, not
+assumed:** fetched Vercel's current cron-jobs docs directly rather than
+relying on memory. Confirmed: Hobby plan cron jobs are capped at once per
+day, with ±59-minute imprecision, full stop — expressions that would run
+more often fail at deploy time. This makes `notification_prefs.daily_prompt_time`
+(a genuinely per-user, precise time the Settings UI lets someone
+configure) structurally unhonorable on Hobby without a paid upgrade. Chose
+a single fixed daily time (20:00 UTC, close to the schema's own
+`20:30` default) sent to every enabled user regardless of their
+individually configured time, and stated the gap plainly in
+`web/README.md`'s known-gaps list and this roadmap row — not silently
+implemented as if the per-user time were being honored.
+**Two real bugs found and fixed while verifying, not just narrated:**
+(1) `src/proxy.ts` had no exception for `/api/cron` — Clerk's
+`auth.protect()` would have redirected every real Vercel Cron invocation
+to `/sign-in` before the request ever reached the route's own
+`CRON_SECRET` check, since a cron trigger carries no Clerk session at all.
+The job would have silently never fired in production; this only surfaced
+because the route was actually curled end-to-end rather than trusting the
+CRON_SECRET check in isolation. Fixed the same way `/api/webhooks` already
+handles this (a route with its own non-Clerk auth mechanism belongs in the
+public-route allowlist). (2) The local Docker Postgres instance's
+`service_role` role had zero table grants on *any* table in the schema,
+not just the new ones — `BYPASSRLS` (which `service_role` has by default)
+only skips row-level policies, it doesn't grant the underlying SQL
+privileges a role needs to touch a table at all, and this repo's
+migrations never explicitly granted them (Supabase's hosted platform
+provisions that automatically when a project is created; the CLI's local
+instance, built purely by replaying committed migrations, does not).
+Added `0008_grant_service_role.sql`, scoped to exactly the two tables and
+operations the cron route actually performs — not a blanket grant — since
+whether the real hosted project already has these grants is unverified
+and the safer default is not to assume it.
+**A third, non-bug finding during verification:** `NEXT_PUBLIC_*`
+environment variables are statically inlined at *build* time, everywhere
+— including server-only route handler code, not just client bundles.
+Overriding them at `next start` time (even correctly, via `--env-file`
+after ruling out shell-escaping as a cause) had no effect, because the
+value was already baked into the compiled output from the earlier build.
+Cost real time to isolate — worth remembering the next time a runtime env
+override for a `NEXT_PUBLIC_*` variable appears to silently not apply: it
+never will, the fix is always to rebuild with the value already set.
+**Verified end-to-end against a local Supabase stack, not just unit-level
+logic:** seeded a real `notification_prefs`/`push_subscriptions` row pair,
+confirmed the `CRON_SECRET` check rejects no-auth and wrong-secret
+requests (both correctly redirected to the route's own 401 only after the
+proxy.ts fix — before that, both were silently swallowed by the Clerk
+redirect instead), confirmed a correctly-authenticated request processes
+the seeded user and advances `daily_prompt_last_sent_date`, confirmed a
+second immediate invocation is a no-op (`usersProcessed: 0` — the
+idempotency guard working), and confirmed the 404/410 stale-subscription
+cleanup path fires and deletes the row using a genuine, real EC keypair
+(generated via Node's own `crypto.generateKeyPairSync`) sent over an
+actual network request to Google's real FCM endpoint — not a mock, a real
+push service correctly rejecting a fake registration ID. Added a
+`console.error` for the non-404/410 branch after noticing send failures
+were otherwise completely invisible even in logs — cheap interim
+visibility ahead of NK-06 (production error monitoring, not built yet).
+
