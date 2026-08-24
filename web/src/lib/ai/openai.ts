@@ -15,6 +15,15 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const TEXT_MODEL = "gpt-4o-mini";
 
+/**
+ * Bump when TONE_SYSTEM_PROMPTS or the user-message template in
+ * generateDailyPrompt changes in a way that should produce different
+ * output — the daily-prompt cache (see /api/ai/prompt/route.ts and
+ * docs/ARCHITECTURE.md §10.2) is keyed on this, so a prompt-engineering
+ * change doesn't sit invisible behind up to 24h of stale cached output.
+ */
+export const DAILY_PROMPT_TEMPLATE_VERSION = 1;
+
 export interface TonePrompt {
   tone: "coach" | "friend" | "mirror" | "minimal";
 }

@@ -136,3 +136,29 @@ this keeps that established pattern rather than introducing a new light-vs-dark 
 other rebuilt screens — rejected because the mockups treat Playback as a distinct mode,
 not a themed variant of the same screen.
 
+### 2026-08-24 — Daily-prompt cache: Postgres table + DB-constraint single-flight, no CDN caching
+
+**Decision:** Added `prompt_cache` (`supabase/migrations/0004_prompt_cache.sql`), keyed
+on `(tone, cache_date, template_version)`, and made `/api/ai/prompt` check it before
+calling OpenAI and insert on a miss. `cache_date` is UTC calendar date, chosen explicitly
+rather than left ambiguous. Concurrency at day rollover is handled by the table's own
+unique constraint — a losing concurrent insert gets Postgres error `23505` and re-selects
+the winning row instead of generating a second time — not application-level locking.
+Explicitly did **not** add `Cache-Control: public, s-maxage=...` for CDN/edge caching,
+despite that being the cheaper option and part of the original proposal.
+**Why:** The prompt route is gated by a Clerk `auth()` check returning 401 for anonymous
+callers. A CDN-level cache hit never re-invokes the origin function, so a publicly
+cacheable response on an authenticated route would let a cached hit skip that check
+entirely — turning an authenticated endpoint into an unauthenticated read path for
+anyone, not just signed-in users. Caught this during implementation, after already
+having proposed the CDN approach in `docs/ARCHITECTURE.md` §10.2 — corrected the doc
+alongside the code rather than leaving the stale recommendation in place. Chose a plain
+Supabase table over Vercel KV/Upstash for the cache store itself because the stack
+explicitly avoids new backend vendors (`docs/ARCHITECTURE.md` §3, §10.6.5) and this
+table needs no more than point lookups by primary key.
+**Rejected:** CDN/edge caching (auth-bypass risk, above). A KV/Redis-backed cache
+(faster reads, but a new vendor for a workload — daily-prompt lookups — that doesn't
+need sub-millisecond latency). Per-user local-date cache keys (would preserve exact
+timezone correctness but collapse the ≤4-calls/day win down to roughly one entry per
+timezone-offset × tone instead of 4 total) — accepted the UTC-boundary tradeoff instead.
+

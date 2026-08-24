@@ -376,3 +376,124 @@ Full visual reference: [Journal App Mobile Flow](https://claude.ai/code/artifact
 | Manifestations list | Goals with AI-detected progress signals |
 | Manifestation add/edit | Goal text, category, resurfacing cadence, auto-detect toggle |
 | Settings | Tone, encryption/privacy, notifications, account |
+
+## 10. AI cost optimization & semantic search
+
+Status: **partially implemented.** The daily-prompt cache (§10.2) is built; everything else in this section is still a design proposal. This section is written to the same standard as the rest of this document — it should be treated as the source of truth for intent once any part of it starts landing, and updated (not left to drift) as pieces ship.
+
+### 10.1 Current AI call inventory
+
+All calls go through `src/lib/ai/openai.ts` (`gpt-4o-mini` for text, `whisper-1` for audio). Only the prompt route is cached; the other three have no caching, and none of the four have rate limiting or usage tracking (§10.6.3, still open).
+
+| Route | Trigger | Input sensitivity | Cacheable? |
+|---|---|---|---|
+| `GET /api/ai/prompt` | Home screen load (`useDailyPrompt`, `staleTime: Infinity` client-side only) | None — `generateDailyPrompt(tone, [])` is called with an always-empty entries arg | **Implemented** — see §10.2 |
+| `POST /api/ai/playback` | "Play Your Week/Month/Year" tap | High — decrypted entry text, transient | Yes, per `(user, period, entry set)` |
+| `POST /api/ai/detect-signals` | Every entry save (fire-and-forget) | High — decrypted entry + manifestation text, transient | No — must run per entry to do its job |
+| `POST /api/ai/transcribe` | Voice entry "Done" | High — raw audio, transient | No — unique audio each time |
+
+### 10.2 Caching strategy per call site
+
+**Daily prompt — implemented.** Because `recentEntrySummaries` is hardcoded to `[]` (`src/app/api/ai/prompt/route.ts`'s own comment marks personalization as unbuilt), the output is identical for every user sharing a `(tone, date)` pair — i.e., at most 4 distinct outputs exist on any given day, but every user independently paid for their own generation of one of those 4. Cached by `(tone, cache_date, template_version)` in a new `prompt_cache` Supabase table (`supabase/migrations/0004_prompt_cache.sql`), a plain table rather than a new KV/Redis vendor, per §10.6.5's recommendation:
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant C as Client
+    participant API as /api/ai/prompt
+    participant DB as Supabase (prompt_cache)
+    participant AI as OpenAI
+
+    C->>API: GET ?tone=friend
+    API->>DB: select where (friend, 2026-08-24, v1)
+    alt cache hit
+        DB-->>API: cached prompt
+    else cache miss
+        API->>AI: generateDailyPrompt(friend, [])
+        AI-->>API: prompt
+        API->>DB: insert (friend, 2026-08-24, v1, prompt)
+        Note over API,DB: unique constraint on (tone, cache_date,<br/>template_version) makes concurrent misses<br/>single-flight — a losing insert (23505) re-selects<br/>and serves the winning row instead of its own
+    end
+    API-->>C: prompt
+```
+
+Collapses N users/day to ≤4 OpenAI calls/day. `cache_date` is the UTC calendar date — an explicit, simple day boundary (§10.6.1 flagged this as ambiguous if left implicit); a user near UTC midnight may see the prompt change at a time that doesn't match their local midnight, accepted for now. `template_version` (`DAILY_PROMPT_TEMPLATE_VERSION` in `src/lib/ai/openai.ts`) lets a future prompt-engineering change invalidate old cache rows immediately instead of waiting out up to 24h of staleness.
+
+**Deliberately not CDN/edge-cached.** The original proposal suggested `Cache-Control: public, s-maxage=86400` so Vercel's edge could serve repeat requests without invoking the function at all. Dropped during implementation: this route is gated by an `auth()` check, and a CDN-level cache hit never re-executes the origin function — so a publicly cacheable response on an authenticated route would let a cached hit bypass the auth check entirely for any caller, not just authenticated ones. The Supabase-backed cache still gets the real win (≤4 OpenAI calls/day); it costs one DB round trip per request instead of a free CDN hit, which is the right trade for keeping the auth check load-bearing.
+
+**This caching is only valid because the prompt is unpersonalized** — the moment `recentEntrySummaries` is wired up, output becomes per-user and falls under the re-encrypt-before-persisting rule in §5, point 2, and this whole cache design must be revisited.
+
+**Playback narrative.** No caching exists; every "Play Your Week" tap re-generates, even for an unchanged period. Entries have no update path (§10.6.2) — the only route for an entry ID is `DELETE`, no `PATCH` — so a cache key of the sorted entry ID set alone (no content-hash or `updated_at` needed) is sufficient and stable. Client-side cache (IndexedDB, keyed by `hash(entry ids, tone)`) is the low-risk version: zero new infrastructure, and it's the client's own already-decrypted data. A cross-device version (small `playback_cache` table storing `(encrypted_narrative, iv)` per §6.4's existing "opt" note) is a real follow-up but not necessary for the cost win.
+
+**Signal detection.** Already skips the call entirely with zero active manifestations. The remaining lever isn't caching — see §10.6.4 (uncapped entry length).
+
+**Transcription.** No caching axis; each recording is unique.
+
+### 10.3 Semantic search — design options
+
+Computing an embedding requires plaintext, and a queryable similarity index requires the vectors to sit somewhere a similarity function can reach them. Both are in tension with §5's threat model ("the operator... should not be able to read journal entries... even under legal compulsion"). Embeddings are not plaintext, but they are known to be partially invertible — recent research recovers meaningful content from embedding vectors — so this document treats them as sensitive as the entries themselves, not as harmless derived data.
+
+| Option | Where embeddings are computed | Where search runs | OpenAI cost/entry | Compatible with §5's threat model |
+|---|---|---|---|---|
+| **A — Client-side model** | In-browser (transformers.js, quantized MiniLM-class model) | In-browser, cosine similarity over cached vectors | None | Yes |
+| **B — Server-assisted, client search** | Vercel Function via OpenAI embeddings API, transient plaintext (mirrors §6.4) | In-browser — vectors are pulled down and decrypted, same as A | Yes, per entry | Yes, but only if search itself stays client-side (see §10.6.6) |
+| **C — Server-side plaintext/vector index** (pgvector, Pinecone, etc.) | Server | Server | Yes | **No — rejected.** An unencrypted, queryable semantic index of the journal is the exact thing §5 promises won't exist. |
+
+```mermaid
+sequenceDiagram
+    actor U as User
+    participant C as Client (PWA)
+    participant W as Web Worker
+    participant IDB as IndexedDB (encrypted vectors)
+
+    Note over C: One-time or incremental, per entry
+    C->>C: Decrypt entry with DEK (already done for Journal list)
+    C->>W: plaintext + entry id
+    W->>W: Embed locally (in-browser model)
+    W-->>C: vector
+    C->>C: Encrypt vector with DEK
+    C->>IDB: store (entry id → encrypted vector)
+
+    Note over U,IDB: At search time
+    U->>C: Search query
+    C->>W: embed(query)
+    W-->>C: query vector
+    C->>IDB: read + decrypt all cached vectors
+    C->>C: cosine similarity, rank, return entry ids
+```
+
+### 10.4 Recommendation
+
+Option A. It is the only option with zero incremental OpenAI cost, the only one that doesn't touch the zero-knowledge promise at all (server never sees plaintext or vectors, full stop — no "transient" caveat needed), and journal search doesn't need enterprise-RAG-grade relevance to be useful. Build scope is a client-side lib, an encrypted IndexedDB store, and a search UI — no new backend surface.
+
+### 10.5 Recommended sequencing
+
+1. **Daily prompt cache** — done (§10.2). Smallest change, real savings starting day one, no encryption questions.
+2. **Rate limiting + usage logging on all four `/api/ai/*` routes** (§10.6.3) — currently absent entirely; do this before, not after, shipping anything that increases call volume.
+3. **Spike: in-browser embedding quality** on real (or realistic) journal text — cheap to test, de-risks the whole semantic search feature before committing UI or a storage schema.
+4. **Playback narrative client-side cache** — nice-to-have, lower urgency than the above.
+5. **Semantic search UI**, only after step 3 validates quality.
+
+### 10.6 Critical review & open risks
+
+This section exists to stress-test §10.1–10.5 rather than let the proposal stand unchallenged — in the same spirit as §8's "still open" list.
+
+**10.6.1 — Daily prompt cache: day-boundary and stampede issues — addressed in the implementation, one tradeoff accepted deliberately.** "Date" is ambiguous across timezones; the implementation picks UTC midnight as an explicit, simple cutover rather than leaving it implicit. A user near that boundary sees the prompt "change" at a time that doesn't match their local midnight — accepted, not fixed, since a per-user local-date key would give up most of the 4-per-day collapse (approaching one cache entry per timezone-offset × tone instead of 4 total). Concurrent cache-miss requests at day rollover are handled by the database's own unique constraint on `(tone, cache_date, template_version)`, not application-level locking: a losing concurrent insert fails with a unique-violation error, and that caller re-selects and serves the winning row instead of generating a second time — genuinely single-flight, not just check-then-write. `template_version` is in place so a future prompt-engineering change can invalidate stale rows immediately rather than waiting out up to 24h.
+
+**10.6.2 — Playback cache: the original draft of this proposal (in conversation, before this doc) assumed an `updated_at` column on `entries` for invalidation. It doesn't exist** — `entries` has no update path at all (0001_init.sql defines only `id, user_id, created_at, mood_score, tags, encrypted_content, iv`; the only per-entry route is `DELETE`). This actually makes the cache key simpler than first proposed (entry ID set alone, no timestamp needed) — but it's worth flagging that this simplification is contingent on entries staying immutable. If entry editing ships later, this cache invalidation logic silently goes stale unless someone remembers to revisit it.
+
+**10.6.3 — No cost circuit breaker exists anywhere in this proposal.** All four routes currently have no rate limiting, no per-user or global spend cap, and no usage logging (verified: no rate-limit or KV/Redis dependency in `package.json`). Caching reduces average cost but does nothing to bound worst case — a bug in a client retry loop, or a user with a scripted client, can still call any of these routes without limit. Recommend: (a) a lightweight per-user rate limit on all four routes (even a crude fixed-window counter is better than nothing), (b) logging `response.usage` token counts (metadata only, never content) so cost is measured rather than guessed, and (c) a soft daily spend ceiling that degrades to a "try again later" response rather than an open-ended bill. None of this is optional if the goal is genuinely "reduce and control cost," not just "reduce average cost."
+
+**10.6.4 — Entry length is uncapped, unlike manifestation text.** `ManifestationForm.tsx` caps input at 200 characters; the journal entry composer (`write/page.tsx`) has no `maxLength` at all. Both `/api/ai/playback` and `/api/ai/detect-signals` send full entry text to OpenAI, so token cost per call scales unboundedly with what a user chooses to write. A sane cap (a few thousand characters) bounds worst-case cost per call and is cheap insurance against both accidental and deliberate abuse — but it's a product decision, not just an engineering one (a journal app capping entry length is a real UX constraint), so it needs sign-off, not just implementation.
+
+**10.6.5 — The caching proposal quietly introduces a new infrastructure dependency the stack table (§3) doesn't have today.** §3 states the explicit non-choice "no separate backend framework/service." A KV/Redis-backed cache (Vercel KV, Upstash) is a new vendor. A Postgres-table-backed cache (a `prompt_cache` table in the existing Supabase instance) is zero new vendors and fits the stack's stated philosophy better, at the cost of slightly higher read latency than a dedicated KV store. Recommend starting with the Supabase-table version and only reaching for KV if read latency is measured to actually matter — not assumed upfront.
+
+**10.6.6 — The client-side embedding store as described breaks an invariant the rest of the app holds carefully.** Everywhere else, nothing derived from plaintext survives a reload without the passphrase — the DEK is memory-only by design (§6.2: "DEK held in memory only for the session"). An unencrypted vector cache in IndexedDB would be the one exception: a persistent, on-disk artifact that's adjacent to entry content, readable by anything with local disk/browser-storage access (malware, a browser extension, a subsequent user of a shared device) without ever needing the passphrase. §10.3's diagram already shows encrypting the cached vector with the DEK before storage — that decision needs to be treated as non-negotiable, not an optional hardening step, or this feature quietly weakens the app's core privacy claim.
+
+**10.6.7 — Performance and footprint risks for a "mobile-first PWA" are real and unaddressed by §10.4 alone.** A quantized in-browser embedding model is commonly tens of MB — a meaningful download on mobile data for a PWA whose stated identity is lightweight and installable. Compounding this: §8 already lists "no service worker registered" as an open gap, so there's currently no mechanism to cache that model download across sessions the way a PWA normally would. Embedding hundreds of entries on-device is also real CPU work that will visibly block the UI if run on the main thread. Recommendations: lazy-load the model only on first search use (never on app load), make search an opt-in setting rather than always-on, run embedding computation in a Web Worker, and treat "register a service worker" as a practical prerequisite to sequence before or alongside this, not after.
+
+**10.6.8 — Multi-device search is an accepted gap, not a solved one.** §6.7 (multi-device key sync) has no awareness of a client-side vector cache — a newly-synced device starts search from zero and must re-embed the entire archive before search works there. This should be stated as an explicit, accepted limitation in the search feature's own design rather than discovered later as a bug report.
+
+**10.6.9 — Model hosting is an undecided operational detail, not a footnote.** transformers.js fetches its model from a HuggingFace CDN by default at runtime. For a PWA that wants any offline capability, this is a third-party runtime dependency for a core feature and should be vendored/self-hosted rather than left as an implicit default.
+
+**10.6.10 — In-browser embedding quality for this specific use case is unvalidated.** MiniLM-class models are a real step down from OpenAI's embedding models, and journaling text (personal, sometimes non-English, often short and colloquial) isn't the domain these small models are typically benchmarked on. §10.5 already sequences a quality spike before the full feature — that ordering is load-bearing, not a nice-to-have. Do not commit to a storage schema or ship search UI before that spike has a real answer.
