@@ -89,6 +89,13 @@ export default function JournalPage() {
                   className="peer h-full w-full outline-none text-body-md text-on-surface bg-transparent pr-4 placeholder:text-outline-variant"
                 />
               </div>
+              <Link
+                href="/search"
+                className="mt-2 inline-flex items-center gap-1 text-label-sm text-primary hover:text-surface-tint transition-colors"
+              >
+                <MaterialIcon name="travel_explore" size={14} />
+                Try Smart Search — find entries by meaning
+              </Link>
             </div>
 
             {isLoading && <p className="text-sm text-on-surface-variant">Loading…</p>}
