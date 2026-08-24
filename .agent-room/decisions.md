@@ -763,3 +763,63 @@ but the doc was never updated to say so, exactly the kind of drift
 notification item rather than leaving known-stale entries sitting next to the
 one being fixed.
 
+### 2026-08-24 — NK-09: Web Push subscription flow, mostly verified — one piece structurally can't be
+
+**Decision:** Built the storage (`0006_push_subscriptions.sql` — keyed by
+`endpoint`, not `user_id`, since one user can have several devices each with
+their own subscription; NK-10's send job fans out to all of them), the API
+(`/api/push-subscriptions` POST/DELETE), the client hook
+(`src/lib/hooks/usePushSubscription.ts` — `useQuery` for status,
+`useMutation`s for subscribe/unsubscribe, matching this codebase's established
+data-hook shape rather than a hand-rolled `useState`/`useEffect` version), and
+the service worker side (`push`/`notificationclick` listeners added to
+`src/app/sw.ts` — not part of Serwist's own event set, so these are plain,
+hand-rolled `self.addEventListener` calls). Wired into both places that
+already existed but did nothing: onboarding's "Enable Notifications" button
+(previously only saved boolean prefs, never actually requested permission —
+wrapped the new `subscribeToPush` call in try/catch so a denied/skipped prompt
+doesn't block finishing onboarding) and a new Settings toggle (previously just
+a static "Push notifications" caption under the Playback Ready row, no control
+at all).
+**Why:** Roadmap item NK-09 — VAPID keys had sat unused in `.env.example`
+since the schema was first scaffolded.
+**Payload contract for NK-10** (documented in `sw.ts` itself, repeated here
+since it's the seam between the two roadmap items): `{title, body, url?}`,
+JSON-encoded. The handler renders whatever it's given verbatim — it's the
+sender's job to only ever send the generic NK-08 copy, not something this
+handler enforces.
+**Migration required regenerating Supabase types again**, same process as
+NK-03/NK-07: `supabase start` restored from a stale snapshot that predated
+`0006_push_subscriptions.sql` (visible immediately — `\dt public.*` showed 8
+tables, not 9), so used `supabase db reset` instead to force a full replay of
+every migration, confirmed the table existed via direct `psql`, then
+regenerated types and diffed the result against the raw CLI output
+byte-for-byte (only the intentional header comment differed) before trusting
+the edit.
+**Genuinely unverified, and here's exactly why it can't be closed by more
+automation effort:** attempted the live subscribe flow in real Chrome (via
+Claude in Chrome, the same tool that correctly confirmed NK-07). Calling
+`Notification.requestPermission()` — both directly via script and from inside
+a `computer`-tool-dispatched click on a real, freshly-injected button — left
+`Notification.permission` at `"default"` indefinitely; no prompt ever
+resolved, and `chrome://settings/content/notifications` isn't reachable
+through the automation surface to inspect why. This is not the same class of
+problem as NK-07's initial false failure (a CDP-automation artifact that real
+Chrome then contradicted) — it's a deliberate Chrome security boundary: an
+extension-dispatched click, even in real Chrome, doesn't satisfy the
+"unspoofable user activation" requirement permission prompts specifically
+check for, precisely so no automation (malicious or otherwise) can auto-click
+through a security-sensitive prompt on a user's behalf. No further retrying in
+this environment will resolve it. What *is* confirmed: the built `sw.js`
+bundle contains both the `push` and `notificationclick` listeners (checked via
+`curl | grep` against the actual served file, not just the source), and
+re-verifying NK-07's offline-fallback behavior after editing `sw.ts` showed no
+regression — server killed, never-visited page still fell back to `/~offline`
+correctly.
+**What closing this out actually requires:** a human clicking "Enable
+Notifications" (onboarding) or the Settings toggle once, for real. At that
+point `web-push send-notification` (CLI, no app code needed) against the
+resulting subscription and the real VAPID keys already in `.env.local` would
+confirm live delivery — that verification step is still open, not attempted,
+because there's no subscription to test against yet without that human click.
+

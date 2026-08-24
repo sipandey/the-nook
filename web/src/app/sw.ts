@@ -48,3 +48,50 @@ const serwist = new Serwist({
 });
 
 serwist.addEventListeners();
+
+/**
+ * Push notification handling — see docs/ROADMAP.md NK-09. Not part of
+ * Serwist's own event set (it only wires up caching-related events), so
+ * these are plain, hand-rolled `push`/`notificationclick` listeners.
+ *
+ * Payload contract for whoever sends a push (NK-10's cron job):
+ * `{ title: string, body: string, url?: string }`, JSON-encoded. `title`
+ * and `body` must already be the generic, non-content-revealing text
+ * decided in NK-08 (docs/ARCHITECTURE.md §8) — this handler renders
+ * whatever it's given verbatim, so getting that right is the sender's
+ * responsibility, not something enforced here. `url` is where a tap
+ * should land (e.g. "/playback" for a playback-ready push); defaults to
+ * "/".
+ */
+self.addEventListener("push", (event) => {
+  let payload: { title?: string; body?: string; url?: string } = {};
+  try {
+    payload = event.data?.json() ?? {};
+  } catch {
+    // A push with a malformed/missing payload shouldn't throw and drop
+    // the notification silently — fall back to a bare, still-generic title.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title ?? "The Nook", {
+      body: payload.body ?? "",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      data: { url: payload.url ?? "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const url: string = event.notification.data?.url ?? "/";
+  const targetUrl = new URL(url, self.location.origin).href;
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      const existing = clients.find((client) => client.url === targetUrl);
+      if (existing) return existing.focus();
+      return self.clients.openWindow(targetUrl);
+    }),
+  );
+});

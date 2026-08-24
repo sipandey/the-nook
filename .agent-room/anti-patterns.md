@@ -21,6 +21,30 @@ Append a new entry every time:
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-08-24 — Notification permission prompts can't be granted via browser automation, ever — don't retry
+
+**What happened:** While verifying NK-09 (Web Push subscription), tried to get
+`Notification.requestPermission()` to actually resolve in real Chrome via
+Claude in Chrome — first as a direct script call, then from inside a
+`computer`-tool-dispatched click on a real button injected into the page (to
+rule out a missing-user-gesture cause). Neither ever resolved;
+`Notification.permission` stayed `"default"` indefinitely both times.
+**Root cause:** Not a bug, not an automation-tool limitation to work around —
+Chrome deliberately requires an *unspoofable* user gesture for
+security-sensitive permission prompts (notifications, camera, microphone,
+geolocation), specifically so no automation layer, extension, or synthetic
+event can auto-approve them on a user's behalf. A CDP/extension-dispatched
+click is not, and structurally cannot be, sufficient — this is the security
+boundary working as intended, not a false negative like the NK-07 SW
+registration issue turned out to be.
+**Avoid:** Don't spend time trying to automate past a notification (or
+camera/mic/geolocation) permission prompt in any browser automation tool —
+direct script calls, synthetic clicks, dispatched events, none of it will
+work, in any browser, automated or not. Verify everything *except* the actual
+grant (code correctness, build output, wiring, no-regression checks on
+adjacent features), then hand the one remaining step to a human explicitly
+rather than retrying automation approaches against it.
+
 ### 2026-08-24 — Service worker registration fails in the automated Browser pane even when the app is correct
 
 **What happened:** While verifying NK-07 (registering a service worker via

@@ -17,6 +17,10 @@
  * against the real project once linked (`supabase link` + `supabase gen
  * types typescript --linked`, or `--project-id <id>`) to close that gap,
  * and after every new migration either way.
+ *
+ * Regenerated 2026-08-24 for 0006_push_subscriptions.sql (NK-09) — same
+ * process (`supabase db reset` this time, since a stale `supabase start`
+ * had restored from a snapshot that predated the new migration).
  */
 
 export type Json =
@@ -307,6 +311,30 @@ export type Database = {
           prompt?: string
           template_version?: number
           tone?: string
+        }
+        Relationships: []
+      }
+      push_subscriptions: {
+        Row: {
+          auth: string
+          created_at: string
+          endpoint: string
+          p256dh: string
+          user_id: string
+        }
+        Insert: {
+          auth: string
+          created_at?: string
+          endpoint: string
+          p256dh: string
+          user_id: string
+        }
+        Update: {
+          auth?: string
+          created_at?: string
+          endpoint?: string
+          p256dh?: string
+          user_id?: string
         }
         Relationships: []
       }

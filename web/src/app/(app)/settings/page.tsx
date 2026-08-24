@@ -9,6 +9,11 @@ import { TONE_OPTIONS } from "@/lib/tone";
 import { useTone } from "@/lib/hooks/useTone";
 import { useKeyMaterial } from "@/lib/hooks/useKeyMaterial";
 import { useNotificationPrefs, useSaveNotificationPrefs } from "@/lib/hooks/useNotificationPrefs";
+import {
+  useSubscribeToPush,
+  useUnsubscribeFromPush,
+  usePushSubscriptionStatus,
+} from "@/lib/hooks/usePushSubscription";
 
 function Toggle({ on, onClick }: { on: boolean; onClick: () => void }) {
   return (
@@ -84,6 +89,9 @@ export default function SettingsPage() {
   const { data: keyMaterial } = useKeyMaterial();
   const { data: prefs } = useNotificationPrefs();
   const savePrefs = useSaveNotificationPrefs();
+  const { data: pushStatus } = usePushSubscriptionStatus();
+  const subscribeToPush = useSubscribeToPush();
+  const unsubscribeFromPush = useUnsubscribeFromPush();
 
   const [toneOpen, setToneOpen] = useState(false);
 
@@ -183,6 +191,32 @@ export default function SettingsPage() {
         <section>
           <h2 className="text-title-md font-editorial-display text-secondary mb-4 px-2">Notifications</h2>
           <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm ring-1 ring-outline/10">
+            <div className="setting-row w-full flex items-center justify-between p-4 border-b border-outline/10">
+              <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+                  <MaterialIcon name="notifications_active" />
+                </div>
+                <div className="text-left">
+                  <div className="text-body-md text-on-surface">Push Notifications</div>
+                  <div className="text-sm text-secondary">
+                    {pushStatus === "unsupported" && "Not supported in this browser"}
+                    {pushStatus === "denied" && "Blocked — enable in your device's notification settings"}
+                    {pushStatus === "unsubscribed" && "Off — the toggles below won't do anything until this is on"}
+                    {pushStatus === "subscribed" && "On for this browser"}
+                    {pushStatus === undefined && "Checking…"}
+                  </div>
+                </div>
+              </div>
+              <Toggle
+                on={pushStatus === "subscribed"}
+                onClick={() => {
+                  if (pushStatus === "subscribed") unsubscribeFromPush.mutate();
+                  else if (pushStatus === "unsubscribed") subscribeToPush.mutate();
+                  // "unsupported"/"denied"/undefined: no click handler that
+                  // could do anything meaningful — see the caption above.
+                }}
+              />
+            </div>
             <div className="setting-row w-full flex items-center justify-between p-4 border-b border-outline/10">
               <div className="flex items-center space-x-4">
                 <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">

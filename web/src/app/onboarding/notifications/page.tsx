@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useNotificationPrefs, useSaveNotificationPrefs } from "@/lib/hooks/useNotificationPrefs";
+import { useSubscribeToPush } from "@/lib/hooks/usePushSubscription";
 
 function Toggle({ on, onClick, id }: { on: boolean; onClick: () => void; id: string }) {
   return (
@@ -62,6 +63,7 @@ export default function OnboardingNotificationsPage() {
   const router = useRouter();
   const { data: prefs } = useNotificationPrefs();
   const savePrefs = useSaveNotificationPrefs();
+  const subscribeToPush = useSubscribeToPush();
   const [showPreview, setShowPreview] = useState(false);
 
   async function handleEnable() {
@@ -70,6 +72,15 @@ export default function OnboardingNotificationsPage() {
       playback_ready_enabled: prefs?.playback_ready_enabled ?? true,
       manifestation_enabled: prefs?.manifestation_enabled ?? false,
     });
+    // The type toggles above are meaningful on their own even if this
+    // fails or is denied — a denied/skipped permission prompt shouldn't
+    // block finishing onboarding, just leave push inactive until the
+    // user grants it later from Settings.
+    try {
+      await subscribeToPush.mutateAsync();
+    } catch {
+      // Intentionally swallowed — see above.
+    }
     router.push("/");
   }
 

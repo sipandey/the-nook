@@ -3,10 +3,13 @@
 Status: assessed 2026-08-24 against `main` @ `fe19e8a`.
 
 **Since assessed:** NK-01 through NK-05 shipped — **Phase 0 (Integrity) is closed.**
-NK-07, NK-08, and NK-11 shipped — Phase 1 is underway. §1's table below is left
-as-is rather than rewritten, since it's an honest record of state at assessment
-time; §3's backlog rows and §6's checklist are the current-status source of truth.
-Next up: NK-09 (Web Push subscription flow), now unblocked.
+NK-07, NK-08, and NK-11 shipped. NK-09 is built and mostly verified — one piece
+(the live subscribe-and-receive round trip) needs a human, since browser
+automation can't satisfy the permission prompt's trusted-gesture requirement, by
+design. §1's table below is left as-is rather than rewritten, since it's an
+honest record of state at assessment time; §3's backlog rows and §6's checklist
+are the current-status source of truth. Next up: NK-10 (Vercel Cron), or close
+out NK-09 first by clicking through it once.
 
 This document is a reading of **state** — what is actually true of the build right
 now, and what to do about it in what order. [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -115,7 +118,7 @@ two · **L** multi-day with design thinking attached.
 | NK-06 | Blocker | Production error monitoring | No visibility into production failures at all. A crash in unlock or decrypt is silent today. Must exclude entry content from payloads. | S |
 | NK-07 | Done | Register the service worker | Wired via `@serwist/turbopack` (not `@serwist/next`, which silently no-ops under Turbopack — see `.agent-room/decisions.md`). Confirmed live in real Chrome, server killed mid-test: registration reaches `activated`, a previously-visited page stays fully available with zero network, and a never-visited page correctly falls back to `/~offline`. (An initial automated-browser test session reported a false failure here — a CDP-automation artifact, not a real bug; see decisions.md for how that was isolated before trusting the real-browser result.) | M |
 | NK-08 | Done | Notification content policy | Decided: generic body text for all three notification types, no exceptions, no opt-in-to-richer toggle for now (deferred until real usage asks for it, not built speculatively). Exact copy and rationale in `docs/ARCHITECTURE.md` §8. Unblocks NK-09/NK-10. | — |
-| NK-09 | High | Web Push subscription flow | VAPID keys are already in `.env.example`; nothing consumes them. Users can configure preferences today that are guaranteed to do nothing. Content policy now settled (NK-08) — build against the exact copy in `ARCHITECTURE.md` §8. | M |
+| NK-09 | High — mostly verified | Web Push subscription flow | Built: `0006_push_subscriptions.sql` (a subscription per device, RLS-scoped), `/api/push-subscriptions` (POST/DELETE), `usePushSubscription.ts` (subscribe/unsubscribe/status), wired into onboarding's "Enable Notifications" and a real Settings toggle (previously just static "Push notifications" caption text). SW `push`/`notificationclick` handlers added and confirmed present in the built bundle. **Genuinely unverified: the live "grant permission → subscribe → receive a push" round trip** — Chrome deliberately blocks any automation-dispatched click, real Chrome included, from satisfying the trusted-user-gesture requirement for the permission prompt (a structural security boundary, not a bug to chase — see `.agent-room/decisions.md`). No regression confirmed for NK-07 (SW still registers, offline fallback still works after the `sw.ts` changes). Needs a human to click "Enable Notifications" once to close this out. | M |
 | NK-10 | High | Vercel Cron → daily reminder | The actual trigger behind the reminder feature. Small once NK-09 exists (NK-07 and NK-08 are both done); meaningless before them. | S |
 | NK-11 | Done | Offline app-shell caching | Fell out of NK-07 as expected: `defaultCache` (from `@serwist/turbopack/worker`) is Serwist's recommended Next.js runtime-caching strategy set, and the real-Chrome test that confirmed NK-07 — reload a previously-visited page with the server dead — is exactly this. Also makes Smart Search's 34MB model cache behave predictably rather than depending on browser Cache API heuristics alone (§10.6.7). | S |
 | NK-12 | Decision | Entry length cap | §10.6.4. Manifestations cap at 200 chars; entries have no `maxLength`. Playback and signal detection both send full text to OpenAI, so cost per call is unbounded. A journaling app capping length is a genuine UX constraint — needs a product call, not just a constant. | S |
