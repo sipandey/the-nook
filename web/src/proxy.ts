@@ -20,6 +20,16 @@ const isPublicRoute = createRouteMatcher([
   "/encryption",
   "/privacy",
   "/delete-my-data",
+  // PWA/service-worker plumbing (see docs/ROADMAP.md NK-07) — must stay
+  // reachable pre-auth: SerwistProvider registers the SW from the root
+  // layout, so it mounts on public pages too (sign-in, about, etc.), and
+  // the SW's install-time precache fetch for /~offline happens without
+  // Clerk session context. Gating either behind auth.protect() would mean
+  // an unauthenticated visitor can't register a service worker at all,
+  // and the cached "offline" fallback would silently become a cached
+  // sign-in redirect instead of the real offline page.
+  "/serwist(.*)",
+  "/~offline",
 ]);
 
 // Dev-only visual QA bypass — see src/lib/preview.ts for the full picture.

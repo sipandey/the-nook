@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader, Hanken_Grotesk } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
 import { Providers } from "./providers";
@@ -42,6 +42,14 @@ export const metadata: Metadata = {
   title: "The Nook",
   description: "A quiet place to write, reflect, and watch yourself grow.",
   manifest: "/manifest.json",
+};
+
+// Matches public/manifest.json's theme_color — this is the separate
+// <meta name="theme-color"> tag (browser chrome while browsing normally),
+// not the installed-PWA theming manifest.json controls; kept in sync
+// rather than left to default so both agree.
+export const viewport: Viewport = {
+  themeColor: "#4f6b52",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

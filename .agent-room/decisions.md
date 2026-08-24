@@ -663,3 +663,67 @@ ever added) alongside the regenerated types and the eslint config fix. Did not
 commit `supabase/.temp/`, `.branches/`, or `snippets/` — ephemeral CLI runtime
 state, cleaned up after `supabase stop` rather than left in the working tree.
 
+### 2026-08-24 — NK-07: registered the service worker via @serwist/turbopack, not @serwist/next
+
+**Decision:** Wired up Serwist (`web/next.config.ts` wraps the config in
+`withSerwist`, `src/app/sw.ts` is the worker source, `src/app/serwist/[path]/route.ts`
+serves the bundled script, `src/app/providers.tsx` mounts `SerwistProvider`
+site-wide) using `@serwist/turbopack`, a package this repo didn't have installed —
+**not** `@serwist/next`, the one already listed in `package.json`. Read
+`@serwist/next`'s actual source (`node_modules/@serwist/next/dist/index.mjs`)
+before writing any code: it only hooks into `nextConfig.webpack(...)`, and this
+project's `dev`/`build` scripts run under Turbopack (confirmed by every build's
+own `▲ Next.js 16.3.2 (Turbopack)` banner throughout this whole multi-session
+build) — under Turbopack, that webpack hook is simply never called, so
+`@serwist/next` would have silently registered nothing while looking wired up.
+The package's own source prints an explicit dev-mode warning about exactly this
+and names `@serwist/turbopack` as the fix. Verified the installed version
+(`9.5.12`, matching the rest of the Serwist packages) actually exports the
+`createSerwistRoute`/`withSerwist` API the docs describe — necessary because
+`@serwist/turbopack`'s published docs site currently describes an unreleased
+`10.0.0-preview` API surface that doesn't match what `npm install`'s version
+range would actually resolve; fetched the real `examples/next-turbo-basic`
+example from the `serwist/serwist` GitHub repo instead of trusting the docs site,
+and confirmed its file layout (`app/sw.ts`, `app/serwist/[path]/route.ts`,
+`tsconfig.json` adding `"webworker"` to the project-wide `lib` array rather than
+scoping it to one file) against this installed version's actual dist output
+before adapting it.
+**Why:** Roadmap item NK-07 — Serwist was a dependency with nothing wired up;
+`manifest.json` and all icon sizes already existed, so this closes the gap.
+`/serwist(.*)` and `/~offline` added to `src/proxy.ts`'s public-route allowlist:
+`SerwistProvider` mounts from the root layout (covers public pages like
+`/sign-in`, not just the authenticated `(app)` group), and the SW's install-time
+precache fetch for the offline fallback happens without Clerk session context —
+gating either behind `auth.protect()` would mean an unauthenticated visitor can't
+register a service worker at all, and the cached "offline" page would silently
+become a cached sign-in redirect instead of the real fallback.
+**Verification — initially incomplete, then confirmed live in real Chrome:** the
+build succeeds and bundles a real 66-entry precache manifest; `/serwist/sw.js`
+and `/~offline` both serve with correct headers (`Content-Type:
+application/javascript`, `Service-Worker-Allowed: /`, no redirect — checked with
+`redirect: 'manual'`). A first attempt at live `navigator.serviceWorker.register()`
+failed in this session's automated Browser pane with Chromium's generic "unknown
+error occurred when fetching the script," even though `read_network_requests`
+confirmed the exact same fetch completed with a clean 200 at the network layer —
+ruled out redirects and module-vs-classic worker type directly (both failed
+identically), which pointed at a CDP-automation/service-worker-registration
+interaction rather than the app, but wasn't conclusive on its own. Once Claude in
+Chrome reconnected, the identical code was re-tested in a real, non-automated
+browser and worked cleanly: registration reaches `activated`, `window.serwist`
+exists, zero console errors. Went further than just registering — killed the
+local `next start` process entirely (not a DevTools offline toggle) and
+confirmed: (1) a page loaded once while the SW was active stays fully available
+with the server dead (proves `defaultCache`'s runtime caching, i.e. NK-11, not
+just registration), (2) a page never visited under an active SW correctly falls
+back to `/~offline`. Unregistered the test SW and closed the tab afterward so no
+stray registration was left pointed at localhost in the real browser profile.
+**Confirms the automated-pane failure really was a tooling artifact, not a
+latent bug** — worth remembering the next time a Serwist/PWA-adjacent check
+fails only in that environment: don't conclude "broken" from the automated pane
+alone if the failure mode is this specific (network-layer success, browser-API-
+layer rejection) and a real-browser cross-check is available.
+**Also added, low-risk/high-confidence, not blocked by the above:** a `viewport`
+export in `layout.tsx` matching `manifest.json`'s existing `theme_color`
+(`#4f6b52`) — two previously-independent declarations of the same intent, now
+consistent.
+

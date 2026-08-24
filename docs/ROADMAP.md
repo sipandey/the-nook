@@ -2,11 +2,12 @@
 
 Status: assessed 2026-08-24 against `main` @ `fe19e8a`.
 
-**Since assessed:** NK-01 through NK-05 all shipped — **Phase 0 (Integrity) is
-closed.** §1's table below is left as-is rather than rewritten, since it's an honest
-record of state at assessment time; §3's backlog rows and §6's checklist are the
-current-status source of truth. Next up: Phase 1 (deliver the advertised product —
-PWA, reminders), starting with NK-07/NK-08.
+**Since assessed:** NK-01 through NK-05 shipped — **Phase 0 (Integrity) is closed.**
+NK-07 and NK-11 shipped and verified live in a real browser — Phase 1 is underway.
+§1's table below is left as-is rather than rewritten, since it's an honest record of
+state at assessment time; §3's backlog rows and §6's checklist are the
+current-status source of truth. Next up: NK-08 (the notification-richness
+decision, which blocks NK-09/NK-10).
 
 This document is a reading of **state** — what is actually true of the build right
 now, and what to do about it in what order. [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -113,11 +114,11 @@ two · **L** multi-day with design thinking attached.
 | NK-04 | Done | CI that builds the app | `.github/workflows/app-ci.yml`: typecheck (`next typegen && tsc --noEmit` — the bare `tsc` needs `.next/types`, which only a build or `next typegen` produces), lint, `npm test`, then `next build`, on every push/PR to `main`. Node version pinned via `web/.nvmrc` (22.20.0), read by `setup-node` — this repo had no pinned version anywhere before. `next build` needs a dummy `OPENAI_API_KEY` to get past module-scope `new OpenAI(...)` in the three `/api/ai/*` routes; verified Clerk/Supabase keys are NOT required at build time by building with a fully empty environment first. | S |
 | NK-05 | Done | Fix standing lint errors | Both `<a>`-instead-of-`<Link>` errors (sign-in/sign-up) fixed — turned out to be a hard prerequisite for NK-04, not a separate follow-up: `npm run lint` genuinely exits 1 on these, so wiring lint into CI without fixing them first would have shipped CI red from the first run. | XS |
 | NK-06 | Blocker | Production error monitoring | No visibility into production failures at all. A crash in unlock or decrypt is silent today. Must exclude entry content from payloads. | S |
-| NK-07 | High | Register the service worker | Serwist is a dependency but appears nowhere in `src/` or `next.config.ts`. `manifest.json` and all icon sizes already exist, so remaining work is registration + an app-shell caching strategy. | M |
+| NK-07 | Done | Register the service worker | Wired via `@serwist/turbopack` (not `@serwist/next`, which silently no-ops under Turbopack — see `.agent-room/decisions.md`). Confirmed live in real Chrome, server killed mid-test: registration reaches `activated`, a previously-visited page stays fully available with zero network, and a never-visited page correctly falls back to `/~offline`. (An initial automated-browser test session reported a false failure here — a CDP-automation artifact, not a real bug; see decisions.md for how that was isolated before trusting the real-browser result.) | M |
 | NK-08 | Decision | Notification content policy | Blocks NK-09. Generic text vs. rich lock-screen previews is a privacy-posture call, not an engineering one. Open in §8. | — |
 | NK-09 | High | Web Push subscription flow | VAPID keys are already in `.env.example`; nothing consumes them. Users can configure preferences today that are guaranteed to do nothing. | M |
 | NK-10 | High | Vercel Cron → daily reminder | The actual trigger behind the reminder feature. Small once NK-07 and NK-09 exist; meaningless before them. | S |
-| NK-11 | High | Offline app-shell caching | Falls out of NK-07. Also makes Smart Search's 34MB model cache behave predictably rather than depending on browser Cache API heuristics alone (§10.6.7). | S |
+| NK-11 | Done | Offline app-shell caching | Fell out of NK-07 as expected: `defaultCache` (from `@serwist/turbopack/worker`) is Serwist's recommended Next.js runtime-caching strategy set, and the real-Chrome test that confirmed NK-07 — reload a previously-visited page with the server dead — is exactly this. Also makes Smart Search's 34MB model cache behave predictably rather than depending on browser Cache API heuristics alone (§10.6.7). | S |
 | NK-12 | Decision | Entry length cap | §10.6.4. Manifestations cap at 200 chars; entries have no `maxLength`. Playback and signal detection both send full text to OpenAI, so cost per call is unbounded. A journaling app capping length is a genuine UX constraint — needs a product call, not just a constant. | S |
 | NK-13 | High | Aggregate spend ceiling | §10.6.3(c), explicitly left open. Existing limits bound calls per user per hour, not total dollars across all users. `ai_usage_log` already records token counts, so the data to build it exists. | M |
 | NK-14 | High | Real-device embedding validation | §10.6.10's own stated caveat: the spike measured Node's ONNX backend on 20 entries. Browser WASM speed on a low-end phone, and retrieval at 1,000+ entries, are both unmeasured. Smart Search could be unusable on the devices most users have. | M |
@@ -202,6 +203,8 @@ that contradicts its own marketing copy.
 - [x] **Crypto is tested.** Round-trip, both unwrap paths, and tamper detection pass in CI.
 - [x] **CI blocks bad merges.** Typecheck, lint, and build all run on every PR.
 - [ ] **Failures are visible.** Production errors reach you without a user reporting them.
-- [ ] **It installs.** Home-screen install works on iOS and Android; the shell opens offline.
+- [ ] **It installs.** Home-screen install works on iOS and Android — *the shell
+      opening offline is now confirmed (NK-07/NK-11); actual Add to Home Screen
+      on a real device is still untested.*
 - [ ] **Reminders arrive.** An opted-in user receives a real scheduled push on a real device.
 - [x] **The data layer is typed.** Generated Supabase types, not the placeholder.

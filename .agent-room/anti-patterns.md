@@ -21,6 +21,36 @@ Append a new entry every time:
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-08-24 — Service worker registration fails in the automated Browser pane even when the app is correct
+
+**What happened:** While verifying NK-07 (registering a service worker via
+`@serwist/turbopack`), `navigator.serviceWorker.register()` failed in the
+automated Browser pane with Chromium's generic "unknown error occurred when
+fetching the script" — even though the server returned a clean 200 with correct
+headers, `redirect: 'manual'` proved no redirect occurred, and switching between
+`type: "module"` and `type: "classic"` made no difference. `read_network_requests`
+confirmed the browser's own fetch for the exact script completed successfully at
+the network layer. The identical, unmodified code then registered and activated
+cleanly in a real (non-automated) Chrome session via Claude in Chrome, with a
+full offline-behavior test (server process killed, not just DevTools' offline
+toggle) passing.
+**Root cause:** Not established with certainty, but the failure signature — a
+successful network-layer fetch (confirmed via CDP's own Network domain) paired
+with a browser-API-layer rejection specifically on `serviceWorker.register()` —
+matches a known class of friction between CDP-driven browser automation and the
+internal script-fetch algorithm Chromium uses for service worker installation
+(a different code path from a page's own `fetch()`, run outside normal
+same-origin interception). Nothing server-side was changed between the failing
+and passing runs.
+**Avoid:** Don't conclude a service-worker/PWA feature is broken from a failure
+in the automated Browser pane alone, especially with this exact signature
+(network request succeeds per `read_network_requests`, but
+`register()`/`getRegistrations()` still reports failure or empty). Cross-check in
+a real, non-automated browser (Claude in Chrome, or ask the user to check
+locally) before spending further effort chasing it as an app bug — and don't
+claim "verified" based on the automated pane's result either way for this
+specific API, since it has demonstrably given a false negative here.
+
 ### 2026-08-24 — `npm run lint 2>&1 | tail -N; echo $?` reported exit 0 for a command that actually failed
 
 **What happened:** While verifying NK-04's CI pipeline, `npm run lint 2>&1 | tail -30`
