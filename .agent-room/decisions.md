@@ -430,3 +430,38 @@ reasons as the actual page copy; forcing them through the same pipeline would ha
 either complicating the parser for one-off cases or losing the ability to make one a
 computed value (the date) and the other a shared fixed element.
 
+## 2026-08-24 — Real brand logo, sourced from Stitch, replaces the placeholder icons
+
+The app's favicon/app icon (`src/app/icon.png`, `apple-icon.png`) and the brand mark shown
+in `PublicPageChrome`'s header and the sign-in/sign-up hero are now the actual "The Nook"
+logo (leaf-in-arch glyph), pulled from the Stitch design project
+(`projects/13778589545983828422/screens/d2398cea54fb4acaa564307eadc52629`, "The Nook
+Abstract Sanctuary Logo") instead of a generic Material Symbols "eco" leaf standing in for
+it. Two derived assets live in `public/brand/`: `logo-full.png` (the full square badge,
+used as-is for `icon.png`/`apple-icon.png`) and `logo-mark.png` (the glyph alone, no
+wordmark, transparent background, recolored to `--color-primary` (#4a654e) instead of the
+mockup's lighter sage so it matches the text it sits next to).
+**Why:** User asked to "apply the logo at other places" after the favicon-only pass, and
+to get Stitch to regenerate a transparent-background version of just the glyph for that —
+the original asset is a flattened square card with the wordmark and a solid cream
+background baked in, unusable inline next to existing "The Nook" text without duplicating
+it.
+**How it was extracted:** Stitch's `edit_screens` was asked to isolate the glyph on a
+transparent background, but it returns a JPEG (no alpha channel), so "transparent" came
+back as a literal baked-in checkerboard pattern, not real alpha. Recovered actual
+transparency by chroma-keying in Python/Pillow: the checkerboard cells are pure
+grayscale (R==G==B) while the line art has a real green tint, so any pixel with
+`G - R > threshold` and `G - B > threshold` became opaque (filled with the fixed brand
+color), everything else transparent — with an explicit row-range exclusion for a faint
+horizontal ghost-text artifact band that shared the same tint and would otherwise have
+survived the color filter.
+**Left untouched, deliberately:** the "eco" icon still appears bare (unswapped) in three
+spots — the home screen's streak indicator, the playback story loading pulse, and
+`AppHeader`'s lock icon — because those aren't brand-mark placements (they're a
+streak/growth indicator and a functional "encrypted" status icon), and two of them use
+theme-dependent color classes (`text-primary-fixed`, dark-mode variants) that a
+fixed-color raster glyph can't follow the way `currentColor` does.
+**Rejected:** using `next/image` for the new `<img>` tags — the codebase doesn't use
+`next/image` anywhere else (existing images, including `QrCode.tsx`'s generated code, are
+plain `<img>`), so matching the established pattern beat introducing it for one icon.
+

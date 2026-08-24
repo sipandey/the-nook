@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { MaterialIcon } from "@/components/MaterialIcon";
 
 /**
  * Header/footer for the small set of public, pre-auth pages (About,
@@ -18,7 +17,7 @@ export function PublicPageHeader() {
   return (
     <header className="w-full sticky top-0 z-40 flex items-center justify-between px-container-padding h-16 shrink-0 bg-background border-b border-outline-variant/20">
       <Link href="/about" className="flex items-center gap-2 text-primary">
-        <MaterialIcon name="eco" filled size={20} />
+        <img src="/brand/logo-mark.png" alt="" width={20} height={20} />
         <span className="font-editorial-display text-title-md">The Nook</span>
       </Link>
       <Link

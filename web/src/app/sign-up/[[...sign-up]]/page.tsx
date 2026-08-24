@@ -102,6 +102,7 @@ export default function SignUpPage() {
       />
       <main className="relative z-10 w-full max-w-md flex flex-col gap-stack-gap">
         <header className="flex flex-col items-center text-center gap-2">
+          <img src="/brand/logo-mark.png" alt="" width={36} height={36} className="mb-2" />
           <h1 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-primary tracking-tight">
             The Nook
           </h1>

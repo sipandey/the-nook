@@ -69,7 +69,7 @@ export default function SignInPage() {
       <main className="relative z-10 flex-grow flex flex-col items-center justify-center px-container-padding py-stack-gap">
         <div className="w-full max-w-md flex flex-col items-center gap-stack-gap">
           <div className="text-center flex flex-col items-center gap-2">
-            <MaterialIcon name="eco" filled size={36} className="text-primary mb-2" />
+            <img src="/brand/logo-mark.png" alt="" width={36} height={36} className="mb-2" />
             <h1 className="font-editorial-display text-headline-lg-mobile md:text-display-lg text-primary">
               The Nook
             </h1>
