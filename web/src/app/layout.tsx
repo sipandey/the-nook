@@ -44,9 +44,30 @@ export const metadata: Metadata = {
   manifest: "/manifest.json",
 };
 
+// Only for a production (pk_live_) instance — see the matching
+// IS_PRODUCTION_CLERK note in src/proxy.ts. Local dev's pk_test_ key
+// keeps talking to Clerk directly, unproxied.
+const CLERK_PROXY_URL = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "").startsWith(
+  "pk_live_",
+)
+  ? "/__clerk"
+  : undefined;
+
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <ClerkProvider>
+    // proxyUrl set explicitly, not left to @clerk/nextjs's Vercel
+    // auto-detection — that only fires client-side when
+    // VERCEL_TARGET_ENV === "production", which would miss Preview
+    // deployments running live keys. See the matching note in
+    // src/proxy.ts (frontendApiProxy), which handles the /__clerk
+    // requests this sends.
+    //
+    // signInUrl/signUpUrl set explicitly too, matching src/proxy.ts's
+    // clerkMiddleware options — without these, client-side Clerk helpers
+    // (and the middleware's own auth.protect() redirect) fall back to
+    // Clerk's hosted Account Portal instead of this app's own custom
+    // /sign-in and /sign-up pages.
+    <ClerkProvider proxyUrl={CLERK_PROXY_URL} signInUrl="/sign-in" signUpUrl="/sign-up">
       <html
         lang="en"
         className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${hankenGrotesk.variable} h-full antialiased`}

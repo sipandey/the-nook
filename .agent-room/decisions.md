@@ -292,3 +292,37 @@ encryption on the grounds that IndexedDB is local-only and never touches the net
 rejected per the "Why" above; local-only doesn't mean not sensitive, per the same
 reasoning already established for vectorStore.ts.
 
+### 2026-08-24 — Clerk production Frontend API proxy set explicitly, not via SDK auto-detection
+
+**Decision:** Wired up Clerk's `/__clerk` Frontend API proxy (needed to move Clerk to a
+production instance without a dedicated `clerk.*` DNS subdomain) with explicit code in
+both `src/proxy.ts` (`clerkMiddleware(handler, { frontendApiProxy: { enabled: true } })`)
+and `src/app/layout.tsx` (`<ClerkProvider proxyUrl="/__clerk">`), rather than leaving it
+to `@clerk/nextjs`'s built-in Vercel auto-detection. Both are gated on the publishable
+key actually starting with `pk_live_` (checked via a plain string prefix, not an
+internal SDK helper — none of `isProductionFromPublishableKey` or similar is exported
+from the public `@clerk/nextjs/server` surface), so local dev's `pk_test_` key is
+untouched.
+**Why:** Read the installed SDK source (`node_modules/@clerk/nextjs@7.8.0/dist/esm/
+server/clerkMiddleware.js` and `@clerk/shared/dist/proxy.js`) rather than trust generic
+docs, since getting Clerk's own auth flow wrong isn't a survivable "we'll fix it later"
+bug. Found that `@clerk/nextjs` *does* auto-detect this proxy setup from Vercel's own
+env vars — but only client-side (`ClerkProvider`'s `mergeNextClerkPropsWithEnv`), and
+only when `process.env.VERCEL_TARGET_ENV === "production"`. The server-side middleware
+half auto-detects independently, based on request hostname at runtime, with no such
+environment restriction. If live keys were ever put on a Preview deployment too (a real
+possibility — nothing stops it), the client half would silently fail to activate there
+while the server half would still expect proxied requests, breaking sign-in on preview
+branches in a way that would work fine locally and in Production, and be genuinely
+confusing to debug. Explicit config removes that whole class of environment-dependent
+behavior.
+**Rejected:** Relying on the SDK's Vercel auto-detection as documented/intended —
+rejected specifically because of the Production/Preview asymmetry above, not because
+auto-detection is unreliable in general. Gating on an internal SDK helper
+(`isProductionFromPublishableKey`) instead of a plain string check — not worth an
+import from a path that isn't part of the package's public API surface for something
+this simple and stable (Clerk's `pk_live_`/`pk_test_` prefix convention). Applying
+`frontendApiProxy`/`proxyUrl` unconditionally (not gated on key type) — rejected because
+it would route local dev's `pk_test_` traffic through the same proxy path unnecessarily,
+a behavior change to an environment this task wasn't asked to touch.
+
