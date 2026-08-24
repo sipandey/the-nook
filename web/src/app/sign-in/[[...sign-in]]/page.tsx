@@ -8,6 +8,7 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSignIn } from "@clerk/nextjs";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
@@ -165,9 +166,9 @@ export default function SignInPage() {
 
           <p className="text-body-md text-on-surface-variant text-center">
             Don&rsquo;t have an account?{" "}
-            <a href="/sign-up" className="text-label-sm text-primary hover:text-surface-tint border-b border-primary/30 hover:border-primary">
+            <Link href="/sign-up" className="text-label-sm text-primary hover:text-surface-tint border-b border-primary/30 hover:border-primary">
               Create one
-            </a>
+            </Link>
           </p>
         </div>
       </main>

@@ -570,3 +570,46 @@ explicitly. A test suite nothing runs on a PR isn't actually a safety net yet; t
 ROADMAP.md checklist item ("Crypto is tested... pass in CI") is deliberately left
 unchecked until that lands.
 
+### 2026-08-24 — NK-04: CI that builds the app, and why NK-05 had to land with it
+
+**Decision:** Added `.github/workflows/app-ci.yml`: typecheck, lint, `npm test`,
+then `npm run build`, on every push/PR to `main` — the existing
+`agent-room-validate.yml` only ever validated the agent-room scaffold, never the
+app itself. Added `web/.nvmrc` (22.20.0) and pointed `actions/setup-node` at it via
+`node-version-file` — this repo had no pinned Node version anywhere before, which
+is why this whole multi-session build repeatedly needed a manual `nvm use
+22.20.0` (the sandbox default is Node 10.24.1, unusable for Next.js 16). Added a
+`typecheck` script: `next typegen && tsc --noEmit`, not bare `tsc --noEmit` —
+discovered that a bare `tsc --noEmit` fails on a fresh checkout with `Cannot find
+name 'LayoutProps'` because Next.js's per-route generated types (under
+`.next/types/`, which `tsconfig.json`'s `include` references) don't exist until a
+build or `next typegen` has run at least once; `next typegen` generates just the
+route types without a full build, so typecheck stays fast and independent of the
+build step rather than only working by accident when `.next/` happens to already
+exist locally. The build step needs a dummy `OPENAI_API_KEY` — verified by
+building with a **fully empty environment** (`env -i`) first: it fails with
+`Missing credentials` from `src/lib/ai/openai.ts`'s module-scope `new
+OpenAI(...)`, called during page-data collection for the three `/api/ai/*`
+routes; a single dummy key value fixes it, and Clerk/Supabase keys turned out not
+to be required at build time at all.
+**Why:** Roadmap item NK-04 — the only CI in the repo never ran `tsc`, `eslint`,
+or `next build`, which is exactly why NK-05's two lint errors sat unnoticed and
+why the `LayoutProps` typecheck gap above was invisible until this work
+deliberately went looking for it.
+**NK-05 (fix standing lint errors) had to land in the same change, not stay a
+separate follow-up:** `npm run lint`'s real exit code (checked directly, not
+through a piped `tail` — an earlier check in this same session was fooled by
+exactly that) is `1` because of the two pre-existing `<a>`-instead-of-`<Link>`
+errors. Wiring lint into CI without fixing them first would have shipped a CI
+pipeline that's red from its very first run on a known, already-diagnosed,
+two-line fix — not "CI that builds the app," CI that's broken on arrival. Fixed
+both (`sign-in`/`sign-up` pages), verified via a real click-through in-browser
+that both directions still navigate with zero console errors — and, separately,
+that the *other* diagnosis method (piping through `tail` and reading `$?`
+afterward) silently reports the wrong exit code, since `$?` then reflects `tail`,
+not the piped command. Worth remembering for any future "did this actually pass"
+check in this repo.
+**Verified the whole pipeline end-to-end locally** — including `npm ci` (not
+`npm install`) against the exact committed lockfile — before trusting any of this
+in GitHub Actions, not just each command in isolation.
+

@@ -13,6 +13,7 @@
  */
 
 import { useState } from "react";
+import Link from "next/link";
 import { useSignUp } from "@clerk/nextjs";
 import { MaterialIcon } from "@/components/MaterialIcon";
 
@@ -190,9 +191,9 @@ export default function SignUpPage() {
             <div className="flex flex-col items-center gap-4">
               <p className="text-body-md text-on-surface-variant">
                 Already have an account?{" "}
-                <a href="/sign-in" className="text-primary hover:text-on-primary-fixed-variant underline underline-offset-4">
+                <Link href="/sign-in" className="text-primary hover:text-on-primary-fixed-variant underline underline-offset-4">
                   Sign in
-                </a>
+                </Link>
               </p>
               <div className="flex items-center gap-2 text-outline-variant">
                 <MaterialIcon name="lock" filled size={14} />

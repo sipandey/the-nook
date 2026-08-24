@@ -10,7 +10,12 @@ Next.js (App Router, TS) · Tailwind · Clerk (auth) · Supabase (Postgres + RLS
 
 ## Setup
 
+Node version is pinned in `.nvmrc` (22.20.0) — `nvm use` before anything else if
+you have nvm; Next.js 16 and Vitest 4 both need Node ≥20, but this repo has been
+built and verified against 22.20.0 specifically.
+
 ```bash
+nvm use                      # or manually match the version in .nvmrc
 npm install
 cp .env.example .env.local   # fill in Clerk / Supabase / OpenAI keys
 ```
@@ -33,8 +38,18 @@ npm test
 WebCrypto covers everything this needs without a jsdom shim) is the only suite so
 far: encrypt/decrypt round-trip, DEK wrap/unwrap under both the passphrase and the
 recovery-code path, and that tampered ciphertext / wrong key / wrong passphrase /
-wrong salt all actually fail rather than silently succeeding. Not yet wired into CI
-(`docs/ROADMAP.md` NK-04) — run it locally before touching `src/lib/crypto/`.
+wrong salt all actually fail rather than silently succeeding.
+
+## CI
+
+`.github/workflows/app-ci.yml` runs on every push/PR to `main`: typecheck
+(`npm run typecheck` — runs `next typegen` first, since a bare `tsc --noEmit`
+needs the route types a build or `next typegen` generates), lint, `npm test`,
+then `npm run build`. The build step needs *some* value for `OPENAI_API_KEY`
+(`src/lib/ai/openai.ts` constructs an `OpenAI` client at module scope, so a
+missing key throws during page-data collection for the `/api/ai/*` routes) — CI
+supplies a placeholder, since no real key is needed to build, only to actually
+call OpenAI at request time. Clerk/Supabase keys are not required to build at all.
 
 ## What's built
 

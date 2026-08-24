@@ -21,6 +21,23 @@ Append a new entry every time:
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-08-24 — `npm run lint 2>&1 | tail -N; echo $?` reported exit 0 for a command that actually failed
+
+**What happened:** While verifying NK-04's CI pipeline, `npm run lint 2>&1 | tail -30`
+followed by `echo "lint exit: $?"` printed `lint exit: 0` — even though the same
+output showed `2 errors`. Nearly concluded lint was passing and moved on before a
+second, direct check (`npm run lint > file.txt 2>&1; echo $?`, no pipe) revealed the
+real exit code was `1`.
+**Root cause:** In a shell pipeline (`cmd1 | cmd2`), `$?` after the pipeline reflects
+the *last* command's exit status — `tail`, which almost always exits 0 — not
+`cmd1`'s. This applies to every `... | tail` / `... | head` / `... | grep` pattern
+used to trim command output in this session, not just this one lint check.
+**Avoid:** Never read `$?` after a piped command when the exit code matters.
+Redirect to a file (or use `set -o pipefail` for the whole script) and check the
+exit code separately: `cmd > out.txt 2>&1; echo $?; tail -30 out.txt`. If truncated
+output was already read via a pipe and the result looked clean, don't trust it —
+re-run with a direct exit-code check before treating a step as green.
+
 ### 2026-08-24 — Committing before turn-end makes the close-the-loop hook vacuously pass
 
 **What happened:** Two consecutive decisions.md entries (the brand-logo one and the

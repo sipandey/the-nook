@@ -2,10 +2,11 @@
 
 Status: assessed 2026-08-24 against `main` @ `fe19e8a`.
 
-**Since assessed:** NK-01 (composer draft persistence) shipped — the first
-contradiction in §1's table below is resolved. Left as-is rather than rewritten,
-since it's an honest record of state at assessment time; §3's backlog row and §6's
-checklist are the current-status source of truth.
+**Since assessed:** NK-01 (composer draft persistence), NK-02 (crypto tests), NK-04
+(CI), and NK-05 (lint errors) shipped — Phase 0 is now closed except NK-03 (real
+Supabase types). §1's table below is left as-is rather than rewritten, since it's an
+honest record of state at assessment time; §3's backlog rows and §6's checklist are
+the current-status source of truth.
 
 This document is a reading of **state** — what is actually true of the build right
 now, and what to do about it in what order. [`ARCHITECTURE.md`](ARCHITECTURE.md)
@@ -107,10 +108,10 @@ two · **L** multi-day with design thinking attached.
 | ID | Priority | Item | Why it matters | Size |
 |---|---|---|---|---|
 | NK-01 | ~~Blocker~~ Done | Composer draft persistence | Shipped: `src/lib/composer/draftStore.ts` + `src/lib/hooks/useComposerDraft.ts`. Debounced autosave (800ms) plus an immediate flush on `visibilitychange`, encrypted with the DEK before it touches IndexedDB, restored on mount with a dismissible banner. | M |
-| NK-02 | Blocker — partial | Test suite for `lib/crypto/` | Written: `src/lib/crypto/index.test.ts` (Vitest, 14 tests) covers encrypt/decrypt round-trip, DEK wrap/unwrap under both passphrase and recovery code, tamper/wrong-key/wrong-passphrase/wrong-salt rejection, and export/import round-trip — each failure-mode assertion verified to actually fail red against a deliberately broken source before being trusted. Passes locally (`npm test`). Still blocking until NK-04 wires it into CI — a test suite nothing runs isn't a safety net. | M |
+| NK-02 | Done | Test suite for `lib/crypto/` | `src/lib/crypto/index.test.ts` (Vitest, 14 tests): encrypt/decrypt round-trip, DEK wrap/unwrap under both passphrase and recovery code, tamper/wrong-key/wrong-passphrase/wrong-salt rejection, export/import round-trip — each failure-mode assertion verified to actually fail red against a deliberately broken source before being trusted. Now enforced in CI by NK-04. | M |
 | NK-03 | Blocker | Generate real Supabase types | `src/lib/supabase/types.ts` is still the loose placeholder — no compile-time column checking anywhere. Needs Docker + project link (see `web/README.md` setup step 3). | S |
-| NK-04 | Blocker | CI that builds the app | The only workflow validates the agent-room scaffold. Add `tsc`, `eslint`, `next build`, and now `npm test` (NK-02's suite exists but nothing runs it in CI yet) on every PR. | S |
-| NK-05 | Blocker | Fix standing lint errors | Two `<a>`-instead-of-`<Link>` errors in sign-in/sign-up cause full page reloads on the auth path. Trivial; invisible today because CI never lints. | XS |
+| NK-04 | Done | CI that builds the app | `.github/workflows/app-ci.yml`: typecheck (`next typegen && tsc --noEmit` — the bare `tsc` needs `.next/types`, which only a build or `next typegen` produces), lint, `npm test`, then `next build`, on every push/PR to `main`. Node version pinned via `web/.nvmrc` (22.20.0), read by `setup-node` — this repo had no pinned version anywhere before. `next build` needs a dummy `OPENAI_API_KEY` to get past module-scope `new OpenAI(...)` in the three `/api/ai/*` routes; verified Clerk/Supabase keys are NOT required at build time by building with a fully empty environment first. | S |
+| NK-05 | Done | Fix standing lint errors | Both `<a>`-instead-of-`<Link>` errors (sign-in/sign-up) fixed — turned out to be a hard prerequisite for NK-04, not a separate follow-up: `npm run lint` genuinely exits 1 on these, so wiring lint into CI without fixing them first would have shipped CI red from the first run. | XS |
 | NK-06 | Blocker | Production error monitoring | No visibility into production failures at all. A crash in unlock or decrypt is silent today. Must exclude entry content from payloads. | S |
 | NK-07 | High | Register the service worker | Serwist is a dependency but appears nowhere in `src/` or `next.config.ts`. `manifest.json` and all icon sizes already exist, so remaining work is registration + an app-shell caching strategy. | M |
 | NK-08 | Decision | Notification content policy | Blocks NK-09. Generic text vs. rich lock-screen previews is a privacy-posture call, not an engineering one. Open in §8. | — |
@@ -198,8 +199,8 @@ Phase 0 plus Phase 1. Shipping before every box is ticked means shipping a produ
 that contradicts its own marketing copy.
 
 - [x] **No data-loss path.** Killing the tab mid-entry and reopening restores the draft.
-- [ ] **Crypto is tested.** Round-trip, both unwrap paths, and tamper detection pass in CI.
-- [ ] **CI blocks bad merges.** Typecheck, lint, and build all run on every PR.
+- [x] **Crypto is tested.** Round-trip, both unwrap paths, and tamper detection pass in CI.
+- [x] **CI blocks bad merges.** Typecheck, lint, and build all run on every PR.
 - [ ] **Failures are visible.** Production errors reach you without a user reporting them.
 - [ ] **It installs.** Home-screen install works on iOS and Android; the shell opens offline.
 - [ ] **Reminders arrive.** An opted-in user receives a real scheduled push on a real device.
