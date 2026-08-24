@@ -10,12 +10,15 @@
  * a literal `runtime = "edge"` requirement.
  *
  * Do not add logging of `entryPlaintexts` or the OpenAI response here —
- * that would defeat the entire point of this boundary.
+ * that would defeat the entire point of this boundary. Rate-limited +
+ * usage-logged (metadata only — route/model/token counts, never content;
+ * see src/lib/ai/usage.ts and docs/ARCHITECTURE.md §10.6.3).
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { generatePlaybackNarrative, type PlaybackInput } from "@/lib/ai/openai";
+import { generatePlaybackNarrative, TEXT_MODEL, type PlaybackInput } from "@/lib/ai/openai";
+import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -27,6 +30,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "no_entries" }, { status: 400 });
   }
 
-  const narrative = await generatePlaybackNarrative(input);
+  if (!(await checkAiRateLimit(userId, "playback"))) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const { narrative, usage } = await generatePlaybackNarrative(input);
+  await recordAiUsage(userId, "playback", TEXT_MODEL, usage);
+
   return NextResponse.json(narrative);
 }

@@ -15,7 +15,7 @@ npm install
 cp .env.example .env.local   # fill in Clerk / Supabase / OpenAI keys
 ```
 
-1. Create a Supabase project, then apply the migrations in `supabase/migrations/` **in order** (`0001_init.sql`, `0002_ciphertext_as_text.sql`, `0003_device_sync.sql`, `0004_prompt_cache.sql`) — either paste each into the SQL Editor, or `psql`/the Supabase CLI against your connection string.
+1. Create a Supabase project, then apply the migrations in `supabase/migrations/` **in order** (`0001_init.sql`, `0002_ciphertext_as_text.sql`, `0003_device_sync.sql`, `0004_prompt_cache.sql`, `0005_ai_usage_log.sql`) — either paste each into the SQL Editor, or `psql`/the Supabase CLI against your connection string.
 2. In Supabase → Authentication → Sign In / Providers, add Clerk as a third-party auth provider — the RLS policies key off the Clerk user ID inside the verified JWT (`auth.jwt()->>'sub'`), so this step isn't optional.
 3. Once the schema is live, regenerate real types: `npx supabase gen types typescript --project-id <id> > src/lib/supabase/types.ts` (replaces the placeholder in that file — needs Docker running locally for `supabase gen types`, which wasn't available when this was scaffolded, so the loose placeholder is still what's in the tree).
 

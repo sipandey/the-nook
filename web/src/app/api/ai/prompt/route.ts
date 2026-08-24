@@ -24,11 +24,16 @@
  * unauthenticated read path. The Supabase-backed cache below still cuts
  * OpenAI calls to at most one per (tone, day); it just costs one DB round
  * trip per request instead of a free CDN hit.
+ *
+ * Rate-limited + usage-logged (docs/ARCHITECTURE.md §10.6.3) — but only on
+ * a cache miss: a cache hit costs nothing, so it shouldn't count against a
+ * limit meant to bound OpenAI spend.
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { generateDailyPrompt, DAILY_PROMPT_TEMPLATE_VERSION } from "@/lib/ai/openai";
+import { generateDailyPrompt, DAILY_PROMPT_TEMPLATE_VERSION, TEXT_MODEL } from "@/lib/ai/openai";
+import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_TONE, type Tone } from "@/lib/tone";
 
@@ -59,7 +64,12 @@ export async function GET(request: Request) {
     return NextResponse.json({ prompt: cached.prompt, tone });
   }
 
-  const prompt = await generateDailyPrompt(tone, []);
+  if (!(await checkAiRateLimit(userId, "prompt"))) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const { prompt, usage } = await generateDailyPrompt(tone, []);
+  await recordAiUsage(userId, "prompt", TEXT_MODEL, usage);
 
   const { error: insertError } = await supabase.from("prompt_cache").insert({
     tone,

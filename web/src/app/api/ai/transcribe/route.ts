@@ -6,11 +6,15 @@
  *
  * Runs on the default Node.js runtime — Next.js 16 deprecated the Edge
  * runtime, see the note in ../playback/route.ts.
+ *
+ * Rate-limited + usage-logged (metadata only — never the audio or the
+ * transcript; see src/lib/ai/usage.ts and docs/ARCHITECTURE.md §10.6.3).
  */
 
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
-import { transcribeAudio } from "@/lib/ai/openai";
+import { transcribeAudio, TRANSCRIBE_MODEL } from "@/lib/ai/openai";
+import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -23,6 +27,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "missing_audio" }, { status: 400 });
   }
 
-  const text = await transcribeAudio(audio);
+  if (!(await checkAiRateLimit(userId, "transcribe"))) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  const { text, usage } = await transcribeAudio(audio);
+  await recordAiUsage(userId, "transcribe", TRANSCRIBE_MODEL, usage);
+
   return NextResponse.json({ text });
 }

@@ -383,7 +383,7 @@ Status: **partially implemented.** The daily-prompt cache (§10.2) is built; eve
 
 ### 10.1 Current AI call inventory
 
-All calls go through `src/lib/ai/openai.ts` (`gpt-4o-mini` for text, `whisper-1` for audio). Only the prompt route is cached; the other three have no caching, and none of the four have rate limiting or usage tracking (§10.6.3, still open).
+All calls go through `src/lib/ai/openai.ts` (`gpt-4o-mini` for text, `whisper-1` for audio). Only the prompt route is cached; the other three have no caching. All four now have rate limiting and usage logging (§10.6.3).
 
 | Route | Trigger | Input sensitivity | Cacheable? |
 |---|---|---|---|
@@ -469,7 +469,7 @@ Option A. It is the only option with zero incremental OpenAI cost, the only one 
 ### 10.5 Recommended sequencing
 
 1. **Daily prompt cache** — done (§10.2). Smallest change, real savings starting day one, no encryption questions.
-2. **Rate limiting + usage logging on all four `/api/ai/*` routes** (§10.6.3) — currently absent entirely; do this before, not after, shipping anything that increases call volume.
+2. **Rate limiting + usage logging on all four `/api/ai/*` routes** (§10.6.3) — done.
 3. **Spike: in-browser embedding quality** on real (or realistic) journal text — cheap to test, de-risks the whole semantic search feature before committing UI or a storage schema.
 4. **Playback narrative client-side cache** — nice-to-have, lower urgency than the above.
 5. **Semantic search UI**, only after step 3 validates quality.
@@ -482,7 +482,11 @@ This section exists to stress-test §10.1–10.5 rather than let the proposal st
 
 **10.6.2 — Playback cache: the original draft of this proposal (in conversation, before this doc) assumed an `updated_at` column on `entries` for invalidation. It doesn't exist** — `entries` has no update path at all (0001_init.sql defines only `id, user_id, created_at, mood_score, tags, encrypted_content, iv`; the only per-entry route is `DELETE`). This actually makes the cache key simpler than first proposed (entry ID set alone, no timestamp needed) — but it's worth flagging that this simplification is contingent on entries staying immutable. If entry editing ships later, this cache invalidation logic silently goes stale unless someone remembers to revisit it.
 
-**10.6.3 — No cost circuit breaker exists anywhere in this proposal.** All four routes currently have no rate limiting, no per-user or global spend cap, and no usage logging (verified: no rate-limit or KV/Redis dependency in `package.json`). Caching reduces average cost but does nothing to bound worst case — a bug in a client retry loop, or a user with a scripted client, can still call any of these routes without limit. Recommend: (a) a lightweight per-user rate limit on all four routes (even a crude fixed-window counter is better than nothing), (b) logging `response.usage` token counts (metadata only, never content) so cost is measured rather than guessed, and (c) a soft daily spend ceiling that degrades to a "try again later" response rather than an open-ended bill. None of this is optional if the goal is genuinely "reduce and control cost," not just "reduce average cost."
+**10.6.3 — No cost circuit breaker existed anywhere in the original proposal — addressed for (a) and (b), (c) still open.** All four routes had no rate limiting, no per-user or global spend cap, and no usage logging (verified: no rate-limit or KV/Redis dependency in `package.json`). Caching reduces average cost but does nothing to bound worst case — a bug in a client retry loop, or a user with a scripted client, could still call any of these routes without limit.
+
+Implemented: `ai_usage_log` (`supabase/migrations/0005_ai_usage_log.sql`) — one row per completed call, metadata only (route, model, token counts, timestamp; never content). `src/lib/ai/usage.ts` provides `checkAiRateLimit` (counts this user's rows for a route in a trailing window, generous per-route ceilings — e.g. 20/hour for playback — meant to bound worst case, not constrain normal use) and `recordAiUsage`, wired into all four routes. The rate-limit check runs immediately before the OpenAI call in each route (after cache lookups, where applicable, so a free cache hit doesn't count against a limit meant to bound spend), returns `429 {error: "rate_limited"}` on a hit, and both functions fail open — a DB hiccup degrades to "allow the call" / "skip the log entry," never to blocking or breaking a legitimate request.
+
+Still open: (c), a soft daily *spend* ceiling. What's built bounds call *count* per user per hour, not aggregate dollar cost across all users, and doesn't degrade the whole app to "AI briefly unavailable" the way a global circuit breaker would. `ai_usage_log`'s token counts are enough to build that on top (sum `total_tokens` over a trailing window, multiply by a per-model rate, compare to a ceiling) — not built yet, worth doing once real usage data exists to size the ceiling against, rather than guessing a number now.
 
 **10.6.4 — Entry length is uncapped, unlike manifestation text.** `ManifestationForm.tsx` caps input at 200 characters; the journal entry composer (`write/page.tsx`) has no `maxLength` at all. Both `/api/ai/playback` and `/api/ai/detect-signals` send full entry text to OpenAI, so token cost per call scales unboundedly with what a user chooses to write. A sane cap (a few thousand characters) bounds worst-case cost per call and is cheap insurance against both accidental and deliberate abuse — but it's a product decision, not just an engineering one (a journal app capping entry length is a real UX constraint), so it needs sign-off, not just implementation.
 

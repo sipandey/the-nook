@@ -10,10 +10,24 @@
 
 import "server-only";
 import OpenAI from "openai";
+import type { AiUsage } from "./usage";
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-const TEXT_MODEL = "gpt-4o-mini";
+export const TEXT_MODEL = "gpt-4o-mini";
+export const TRANSCRIBE_MODEL = "whisper-1";
+
+/** Converts an OpenAI chat-completion usage object to our metadata-only
+ *  shape (see src/lib/ai/usage.ts) — `import type` only, so this file
+ *  never actually pulls in usage.ts's DB/auth code, just its type. */
+function toAiUsage(usage?: { prompt_tokens?: number; completion_tokens?: number; total_tokens?: number }): AiUsage | undefined {
+  if (!usage) return undefined;
+  return {
+    promptTokens: usage.prompt_tokens,
+    completionTokens: usage.completion_tokens,
+    totalTokens: usage.total_tokens,
+  };
+}
 
 /**
  * Bump when TONE_SYSTEM_PROMPTS or the user-message template in
@@ -47,7 +61,7 @@ const TONE_SYSTEM_PROMPTS: Record<TonePrompt["tone"], string> = {
 export async function generateDailyPrompt(
   tone: TonePrompt["tone"],
   recentEntrySummaries: string[],
-): Promise<string> {
+): Promise<{ prompt: string; usage?: AiUsage }> {
   const response = await openai.chat.completions.create({
     model: TEXT_MODEL,
     messages: [
@@ -63,7 +77,10 @@ export async function generateDailyPrompt(
     max_tokens: 100,
   });
 
-  return response.choices[0]?.message?.content?.trim() ?? "";
+  return {
+    prompt: response.choices[0]?.message?.content?.trim() ?? "",
+    usage: toAiUsage(response.usage),
+  };
 }
 
 export interface PlaybackInput {
@@ -98,7 +115,7 @@ export interface PlaybackNarrative {
  *  the user's own data beats an LLM guessing at a comparison. */
 export async function generatePlaybackNarrative(
   input: PlaybackInput,
-): Promise<PlaybackNarrative> {
+): Promise<{ narrative: PlaybackNarrative; usage?: AiUsage }> {
   const response = await openai.chat.completions.create({
     model: TEXT_MODEL,
     messages: [
@@ -122,9 +139,11 @@ export async function generatePlaybackNarrative(
     max_tokens: 500,
   });
 
-  return JSON.parse(
+  const narrative = JSON.parse(
     response.choices[0]?.message?.content ?? "{}",
   ) as PlaybackNarrative;
+
+  return { narrative, usage: toAiUsage(response.usage) };
 }
 
 export interface ManifestationForDetection {
@@ -148,8 +167,8 @@ export interface DetectedSignal {
 export async function detectManifestationSignals(
   entryText: string,
   manifestations: ManifestationForDetection[],
-): Promise<DetectedSignal[]> {
-  if (manifestations.length === 0) return [];
+): Promise<{ signals: DetectedSignal[]; usage?: AiUsage }> {
+  if (manifestations.length === 0) return { signals: [] };
 
   const response = await openai.chat.completions.create({
     model: TEXT_MODEL,
@@ -180,17 +199,33 @@ export async function detectManifestationSignals(
   const parsed = JSON.parse(response.choices[0]?.message?.content ?? "{}") as {
     signals?: DetectedSignal[];
   };
-  return parsed.signals ?? [];
+  return { signals: parsed.signals ?? [], usage: toAiUsage(response.usage) };
 }
 
 /** Transcribes recorded audio via Whisper. Raw audio is not persisted here
  *  or by the caller — see docs/ARCHITECTURE.md §6.5 and the open question
  *  on audio retention in §8. */
-export async function transcribeAudio(audio: File): Promise<string> {
+export async function transcribeAudio(
+  audio: File,
+): Promise<{ text: string; usage?: AiUsage }> {
   const response = await openai.audio.transcriptions.create({
-    model: "whisper-1",
+    model: TRANSCRIBE_MODEL,
     file: audio,
   });
 
-  return response.text;
+  // whisper-1 is billed by audio duration, not tokens — its usage object
+  // (when present) carries `seconds`, not prompt/completion counts. Only
+  // the token-billed variant (other transcription models) maps onto
+  // AiUsage; duration-only responses still get logged by the caller for
+  // call-count-based rate limiting, just without a token figure.
+  const usage =
+    response.usage?.type === "tokens"
+      ? {
+          promptTokens: response.usage.input_tokens,
+          completionTokens: response.usage.output_tokens,
+          totalTokens: response.usage.total_tokens,
+        }
+      : undefined;
+
+  return { text: response.text, usage };
 }

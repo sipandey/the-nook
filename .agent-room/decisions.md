@@ -162,3 +162,34 @@ need sub-millisecond latency). Per-user local-date cache keys (would preserve ex
 timezone correctness but collapse the ≤4-calls/day win down to roughly one entry per
 timezone-offset × tone instead of 4 total) — accepted the UTC-boundary tradeoff instead.
 
+### 2026-08-24 — Rate limiting + usage logging reuse one table, checked only on cache miss
+
+**Decision:** Added `ai_usage_log` (`supabase/migrations/0005_ai_usage_log.sql`) as a
+single table serving two purposes: an audit trail (one row per completed AI call —
+route, model, token counts, timestamp; never content) and the data source for rate
+limiting (`checkAiRateLimit` in `src/lib/ai/usage.ts` counts a user's rows for a route
+within a trailing window instead of maintaining a separate counter table). Wired into
+all four `/api/ai/*` routes: `checkAiRateLimit` runs immediately before the OpenAI call
+(after any cache lookup), `recordAiUsage` runs immediately after a successful call.
+Changed `generateDailyPrompt`, `generatePlaybackNarrative`, `detectManifestationSignals`,
+and `transcribeAudio` in `src/lib/ai/openai.ts` to return `{ result, usage }` instead of
+bare content, so token counts surface to the route handlers without `openai.ts` itself
+taking on any DB/auth dependency.
+**Why:** A single log-table-as-rate-limiter avoids a second new artifact (an atomic
+counter table) for what fixed-window rate limiting actually needs — a row count over
+recent time, which this app's scale doesn't need sub-millisecond latency for. Checking
+the limit only on a cache miss (specifically in `/api/ai/prompt`) matters: a cache hit
+costs nothing, so counting it against a limit meant to bound OpenAI spend would be
+wrong. Keeping usage/DB concerns out of `openai.ts` preserves the separation already
+established between it (talk to OpenAI, return content) and the route handlers (who is
+this for, should we let them) — mirrors where `auth()` already lives.
+**Rejected:** A separate atomic counter table with upsert-on-conflict increments —
+more "correct" under high concurrency, but this app has no concurrency at the scale
+that would matter, and it's a second table for no real benefit over counting the usage
+log. A global/aggregate spend ceiling (sum of token cost across all users) — deferred;
+what's built bounds per-user call *count*, not aggregate *dollar* cost, and sizing a
+dollar ceiling before any real usage data exists would be guessing. Both functions fail
+open (a DB error allows the call / skips the log write) rather than fail closed —
+chosen so a logging/rate-limit bug degrades to "occasionally under-limits," never to
+"blocks legitimate use of the app."
+
