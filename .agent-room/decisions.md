@@ -727,3 +727,39 @@ export in `layout.tsx` matching `manifest.json`'s existing `theme_color`
 (`#4f6b52`) — two previously-independent declarations of the same intent, now
 consistent.
 
+### 2026-08-24 — NK-08: notification content is generic for all three types, no exceptions
+
+**Decision:** All shipped push notification bodies stay generic, for all three
+notification types (`daily_prompt`, `playback_ready`, `manifestation`), with no
+per-type richness and no opt-in Settings toggle to unlock richer previews for
+now. Exact copy (recorded as the canonical source in `docs/ARCHITECTURE.md` §8,
+not just here): daily prompt → "Time to reflect"; playback ready → "Your weekly
+playback is ready"; manifestation resurfaced → "A manifestation resurfaced."
+Before asking the user to decide, pulled the actual mockup copy from
+`design/mobile-flow/LockScreenNotifications.dc.html` rather than presenting the
+question abstractly — the three types turned out to have meaningfully different
+exposure levels in the original design, not a uniform "rich vs. generic" binary:
+playback-ready's mockup text was already generic (no change needed); daily
+prompt's mockup quoted the AI-generated prompt itself (a question, not personal
+content); manifestation's mockup directly quoted the *subject of a real journal
+entry* ("Your March entry about presenting with confidence — worth a look") —
+the one type that actually leaked something a lock-screen glance shouldn't show.
+Presented the user a type-aware option (generic only where the mockup actually
+exposed content) alongside the simpler blanket-generic option; they chose
+blanket-generic for all three anyway, favoring one simple rule over a policy
+that would need explaining per notification type.
+**Why:** Roadmap item NK-08 — this was correctly scoped as a product/privacy
+decision only the user can make, not an engineering call; the previous pass
+through this codebase (docs/ROADMAP.md's original assessment) explicitly flagged
+it as open rather than guessing at an answer.
+**Opt-in toggle for richer previews:** considered, not rejected — deliberately
+deferred rather than built speculatively. The user's own reasoning: build it once
+real usage shows people actually want it, not ahead of anyone using the app.
+**Also fixed while in `docs/ARCHITECTURE.md` §8 anyway:** two other items in that
+same "still open" list — offline write conflict handling, PWA installability —
+had already been resolved by NK-01 and NK-07/NK-11 in earlier turns this session
+but the doc was never updated to say so, exactly the kind of drift
+`ARCHITECTURE.md`'s own header warns against. Updated both alongside the
+notification item rather than leaving known-stale entries sitting next to the
+one being fixed.
+

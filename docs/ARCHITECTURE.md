@@ -269,7 +269,7 @@ sequenceDiagram
     SW-->>U: Lock-screen notification
 ```
 
-Note: the lock-screen mockup in the design canvas shows descriptively rich preview text (e.g. quoting the day's prompt). That's illustrative of the *feature*, not a settled decision — see the open question in §8 about notification content richness vs. lock-screen exposure.
+Note: the lock-screen mockup in the design canvas shows descriptively rich preview text (e.g. quoting the day's prompt, or the subject of a resurfaced manifestation's entry). That's illustrative of the *feature*, not the shipped copy — see §8's resolved notification-content-richness item: bodies are generic for all three types ("Time to reflect" / "Your weekly playback is ready" / "A manifestation resurfaced"), no exceptions.
 
 ### 6.7 Multi-device key sync
 
@@ -348,10 +348,11 @@ This diagram shows the intended shape, not a claim that every box is live: `SW` 
   - **Multi-device key handling.** Built — see §6.7. QR-code handoff between an already-unlocked device and a new one, server-relayed but never server-readable.
   - **Data export / account deletion.** Built, in Settings. Export decrypts everything client-side and downloads JSON — no server route needed, since the server never had anything but ciphertext. Deletion is type-to-confirm, wipes every Supabase table for the user, then deletes the Clerk account itself (data first, while the session's still valid; Clerk account last, since that's irreversible).
   - **Whisper audio retention.** Confirmed as implemented: `VoiceRecorder` sends the recorded blob directly to `/api/ai/transcribe` and neither side writes it anywhere. Also now explicitly *not* live-streaming — see §6.5.
+  - **Notification content richness vs. lock-screen privacy.** Decided: generic body text for all three notification types, no exceptions, no per-type richness, no Settings toggle to opt into more — the lock-screen mockup's descriptive previews (particularly the manifestation type, which quoted a real entry's subject directly — see `design/mobile-flow/LockScreenNotifications.dc.html`) were illustrative of the feature, not the shipped copy. Exact bodies: daily prompt → "Time to reflect"; playback ready → "Your weekly playback is ready" (the mockup's version was already generic, unchanged); manifestation resurfaced → "A manifestation resurfaced" (the mockup's version quoted the entry's subject — that's what this decision removes). An opt-in toggle for richer previews was considered and deliberately deferred, not rejected — build it only if real usage shows people actually want it, not speculatively. This unblocks NK-09 (Web Push subscription flow) and NK-10 (Vercel Cron) — both were blocked on this decision, not on anything technical.
+  - **Offline write conflict handling.** Built — see `src/lib/hooks/useComposerDraft.ts` and `src/lib/composer/draftStore.ts`. The composer's draft autosaves to IndexedDB (debounced, plus an immediate flush on `visibilitychange`) encrypted with the DEK, and restores on reopen with a dismissible banner. No sync-back/conflict resolution needed beyond that: entries have no update path (§10.6.2), so there's only ever one writer and no concurrent-edit case to resolve.
+  - **PWA installability.** Service worker registered — see `src/app/sw.ts`, `src/app/serwist/[path]/route.ts`, `SerwistProvider` in `src/app/providers.tsx`. Offline app-shell caching confirmed working (verified live: killed the local server process entirely, a previously-visited page stayed fully available, a never-visited one fell back to the on-brand `/~offline` page). `manifest.json` and icon sizes already existed; actual Add to Home Screen on a real device is still untested.
 - Still open (flag before building the relevant piece):
-  - **Notification content richness vs. lock-screen privacy.** The lock-screen mockup shows descriptive previews; decide whether shipped notifications stay generic ("Time to reflect") or allow rich previews with a Settings toggle to suppress them on the lock screen. Moot until Vercel Cron + Web Push are actually wired (`notification_prefs` stores the preference; nothing triggers a push yet).
-  - **Offline write conflict handling.** The composer currently holds its text in plain React state — a dropped connection or refresh mid-entry loses it. The IndexedDB draft-cache idea in §3/§7 is still just a plan, not implemented; there's no sync-back/conflict-resolution behavior to design until the cache itself exists.
-  - **PWA installability.** Serwist is installed but no service worker is registered — no offline app-shell caching, no installable-to-home-screen behavior yet.
+  - Nothing currently — see `docs/ROADMAP.md` for what's next.
 
 ## 9. Screen inventory
 
