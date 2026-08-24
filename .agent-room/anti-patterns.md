@@ -21,6 +21,30 @@ Append a new entry every time:
 
 <!-- Entries go below this line, newest first. -->
 
+### 2026-08-24 — Committing before turn-end makes the close-the-loop hook vacuously pass
+
+**What happened:** Two consecutive decisions.md entries (the brand-logo one and the
+roadmap one) were written with `##` headings and no `**Decision:**` field, against a
+file whose other 24 entries all use `### YYYY-MM-DD — title` plus `**Decision:**` /
+`**Why:**`. The first one shipped to `main` undetected; the hook only rejected the
+second. The inconsistency in *when* the hook fires was the confusing part, not the
+formatting mistake itself.
+**Root cause:** `close-the-loop-check.js` reads `git status --porcelain` and returns
+`ok: true` immediately when no non-scaffold paths are dirty — before it ever calls
+`validateLogEvidenceFromDiff`. In the logo turn, everything (including decisions.md)
+was committed and pushed *within the turn*, so the working tree was clean at Stop
+time and the evidence check never ran. In the roadmap turn the files were left
+uncommitted for review, so validation actually executed and caught the malformed
+entry. The hook therefore validates entry quality only for work left uncommitted; any
+turn that commits before ending skips the check entirely.
+**Avoid:** Don't treat "the Stop hook passed" as evidence that a decisions.md or
+anti-patterns.md entry is well-formed — it only means the check ran *or* was skipped.
+Match the file's existing entry format by reading a neighbouring entry first. The
+required shape is exact and machine-checked: heading must be `###` (not `##`), and a
+decision entry needs **both** `**Decision:**` and `**Why:**` (`.every`), while an
+anti-pattern entry needs only one of `**What happened:**` / `**Root cause:**` /
+`**Avoid:**` (`.some`) — see `.agent-room/hooks/closing-the-loop-evidence.js`.
+
 ### 2026-08-24 — Custom domain redirected to Clerk's hosted Account Portal instead of this app's own /sign-in
 
 **What happened:** After moving Clerk to a production instance on the new custom domain

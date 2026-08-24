@@ -430,9 +430,9 @@ reasons as the actual page copy; forcing them through the same pipeline would ha
 either complicating the parser for one-off cases or losing the ability to make one a
 computed value (the date) and the other a shared fixed element.
 
-## 2026-08-24 — Real brand logo, sourced from Stitch, replaces the placeholder icons
+### 2026-08-24 — Real brand logo, sourced from Stitch, replaces the placeholder icons
 
-The app's favicon/app icon (`src/app/icon.png`, `apple-icon.png`) and the brand mark shown
+**Decision:** The app's favicon/app icon (`src/app/icon.png`, `apple-icon.png`) and the brand mark shown
 in `PublicPageChrome`'s header and the sign-in/sign-up hero are now the actual "The Nook"
 logo (leaf-in-arch glyph), pulled from the Stitch design project
 (`projects/13778589545983828422/screens/d2398cea54fb4acaa564307eadc52629`, "The Nook
@@ -464,4 +464,32 @@ fixed-color raster glyph can't follow the way `currentColor` does.
 **Rejected:** using `next/image` for the new `<img>` tags — the codebase doesn't use
 `next/image` anywhere else (existing images, including `QrCode.tsx`'s generated code, are
 plain `<img>`), so matching the established pattern beat introducing it for one icon.
+
+### 2026-08-24 — Roadmap lives in docs/ROADMAP.md, separate from ARCHITECTURE.md
+
+**Decision:** Added `docs/ROADMAP.md` — a prioritized backlog (19 items), four gated phases, open
+product decisions, an explicit not-doing list, and a launch-ready checklist — as a
+sibling to `ARCHITECTURE.md` rather than a new section inside it. The split is along
+**intent vs. state**: ARCHITECTURE.md describes what the product is meant to be and
+stays true indefinitely; ROADMAP.md describes what is currently true of the build and
+goes stale by design, so it carries a "assessed against `main` @ `<sha>`" stamp and
+says outright that ARCHITECTURE.md wins on intent where the two disagree. Linked from
+the root README's "Where to start" table so it's discoverable rather than buried.
+**Why:** A roadmap folded into ARCHITECTURE.md would have made a document explicitly
+described as "the source of truth" partly obsolete the moment any item shipped —
+mixing durable and perishable content in one file is what causes docs to lose
+authority. Keeping them separate means ROADMAP.md can be aggressively rewritten each
+time priorities move without anyone worrying they're editing the spec.
+**Two gaps this surfaced that weren't in any existing gap list:** (1) CI validates the
+agent-room scaffold but never runs `tsc`, `eslint`, or `next build`, which is why two
+`<a>`-instead-of-`<Link>` lint errors in sign-in/sign-up have sat unnoticed; (2)
+`src/lib/supabase/types.ts` is still the loose placeholder, so the entire data layer
+has no compile-time column checking. Both are recorded as NK-04/NK-03. `web/README.md`'s
+known-gaps list stays as-is and is now the *feature*-level view, with ROADMAP.md
+covering process and infrastructure gaps it never claimed to.
+**Rejected:** a GitHub Projects board or issue tracker instead of a file — for a solo
+builder, a file that reviews in the same diff as the code it describes beats a
+separate system that drifts. Also rejected: including day-level time estimates;
+XS/S/M/L relative sizes convey the same sequencing information without implying a
+velocity that hasn't been measured.
 

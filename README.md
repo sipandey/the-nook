@@ -11,6 +11,7 @@ Design direction: light, calm, "sage" palette (soft green hills / forest motif) 
 | If you want... | Go to |
 |---|---|
 | Product intent, data model, encryption design, sequence diagrams | [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) |
+| What to build next, in what order, and what's deliberately declined | [`docs/ROADMAP.md`](docs/ROADMAP.md) |
 | What's actually built vs. known gaps, setup instructions | [`web/README.md`](web/README.md) |
 | The full mobile screen designs (source `.dc.html` files) | [`design/mobile-flow/`](design/mobile-flow/) |
 | The app itself | [`web/`](web/) — Next.js, run `npm install && npm run dev` there |
