@@ -326,3 +326,107 @@ this simple and stable (Clerk's `pk_live_`/`pk_test_` prefix convention). Applyi
 it would route local dev's `pk_test_` traffic through the same proxy path unnecessarily,
 a behavior change to an environment this task wasn't asked to touch.
 
+### 2026-08-24 — Unified BottomTabBar (green active state); Write composer gets header/footer
+
+**Decision:** Eliminated Playback's two inline, hand-copied bottom-nav blocks (one per
+light/dark state) in favor of the shared `BottomTabBar` component, extended with a
+`variant: "light" | "dark"` prop matching `AppHeader`'s existing pattern. Standardized
+the active-tab highlight on `bg-primary-container`/`text-on-primary-container` (green)
+everywhere — the three prior implementations disagreed (`secondary-container`/peach in
+`BottomTabBar`, `primary-container`/green in both of Playback's inline copies) — and
+standardized label typography to plain `text-label-sm` (dropping
+`uppercase tracking-wider` from the original `BottomTabBar`, which Playback's copies
+never had). Also fixed a real bug found while comparing the three copies: all three
+labeled a tab "Journal" but linked it to `href: "/write"` (the composer) instead of
+`/journal` (the list) — tapping "Journal" in the bottom nav never actually opened the
+journal list. Separately, gave the Write composer's text stage a standard `AppHeader`
++ `BottomTabBar` in place of its bespoke X-close/"New Entry" header and lack of any
+footer nav, matching every other (app)-group screen.
+**Why:** Three independent copies of the same nav had drifted in exactly the ways a
+shared component prevents — color, typography, and even a broken link, silently, for
+however long "Journal" pointed at the wrong route. Green over peach because that's the
+explicit design direction given (theme-matching), and because Playback's own two
+copies had independently already converged on green, suggesting it was already the
+intended color and `BottomTabBar` (peach) was the outlier, not the other way round. The
+Write composer's custom header made sense in isolation but reads as "this screen is a
+different kind of thing" once every sibling screen (Home, Journal, Manifestations,
+Playback, Settings) shares one header/footer language — consistency was the explicit
+ask, not a judgment call.
+**Rejected:** Keeping Playback's inline navs and just recoloring them to match — passed
+over because the underlying problem (three copies of one component) would still exist
+and drift again the next time anyone touched one copy and not the others; the `/write`
+vs `/journal` bug is direct evidence that already happened once. Keeping a close/X
+button on the Write composer's header for explicit escape — dropped in favor of relying
+on `BottomTabBar`'s Home/Journal links, consistent with how every other non-modal
+screen in the app already expects the user to navigate, and per the user's explicit
+"ensure consistency" instruction rather than preserving the modal-style affordance.
+
+### 2026-08-24 — Added four public legal/marketing pages, outside auth entirely
+
+**Decision:** Added `/about`, `/encryption`, `/privacy`, `/delete-my-data` as new routes
+directly under `src/app/` (siblings to `sign-in`/`sign-up`, not inside the `(app)` route
+group), added all four to `isPublicRoute` in `src/proxy.ts`, and built a small shared
+`PublicPageHeader`/`PublicPageFooter` (`src/components/PublicPageChrome.tsx`) rather than
+reusing `AppHeader`/`BottomTabBar`. Linked them from the sign-in page's footer. Privacy
+Policy content is grounded directly in `docs/ARCHITECTURE.md` §5/§6 (verified against the
+actual schema and `src/app/api/account/route.ts`'s real deletion order, not written from
+a generic template) and names the one real exception to "we never see your plaintext" —
+transient AI-feature plaintext exposure to OpenAI — explicitly rather than glossing over
+it. Contact email (sipandey.sape006@gmail.com) confirmed with the user rather than
+invented; asked before writing anything, since a wrong or placeholder contact/entity in a
+privacy policy is worse than not having the page yet.
+**Why:** `AppHeader` assumes a signed-in visitor (it links to Settings, and its lock icon
+implies "your journal is currently unlocked" in the first person) — wrong tone and wrong
+functionality for a pre-signup visitor. Placed outside `(app)` specifically so `UnlockGate`
+never wraps them — a legal page requiring a journal passphrase to unlock would defeat the
+purpose of a legal page. Grounding the Privacy Policy in the actual codebase (real table
+names, the real deletion order, the real third parties: Clerk/Supabase/OpenAI/Vercel, and
+confirming no analytics/tracking library exists before claiming none is used) matters
+because a privacy policy is a factual claim people may rely on, not marketing copy —
+getting a detail wrong here is a different order of problem than a wrong detail in UI
+copy.
+**Rejected:** Guessing at a business entity name, address, or compliance-framework
+claims (e.g. asserting GDPR compliance) — none of that exists to draw from in this repo,
+and inventing it would be worse than omitting it; the policy names jurisdictions
+generically ("if you're in a jurisdiction with...") rather than claiming a compliance
+status. Building these as Settings-only, authenticated pages — rejected per explicit user
+direction and because privacy/deletion information genuinely needs to be reachable by
+someone who hasn't signed up, or who's locked out and wants to know how to request
+deletion without an account.
+
+### 2026-08-24 — Public-page copy moved to Markdown, via a hand-rolled ~250-line renderer, not a library
+
+**Decision:** Extracted all four public pages' prose out of JSX and into `web/content/*.md`,
+read at request time via literal-path `fs.readFileSync` calls (one function per file in
+`src/lib/content.ts`, not a single `readContent(slug)` taking a variable — see that
+file's comment on why: Vercel's serverless file-tracing isn't reliable for
+dynamically-interpolated paths, only literal ones). Rendered via a new
+`src/components/MarkdownContent.tsx` — a dependency-free parser/renderer scoped to
+exactly the Markdown subset these four pages use (`#`/`##`/`### N. Title` headings,
+`> ` blockquotes that recursively re-parse their own contents, ordered lists, `**bold**`/
+`` `code` ``/`[text](url)` inline, with internal links routed through `next/link` and
+`mailto:` links getting an automatic mail-icon prefix), not a general CommonMark
+implementation or a markdown library dependency. A few things stayed as fixed JSX rather
+than moving into Markdown: Privacy's "Last updated" line (document metadata, not prose),
+and each page's trailing icon+text branding row (chrome, not content) — content and
+chrome are different things and only one of them needed to move.
+**Why:** User asked to move page text out of components into separate,
+easier-to-edit files. Four static pages didn't justify a real Markdown library as a new
+dependency — the actual syntax in play (headings, one level of blockquote nesting, bold,
+code, links, ordered lists) is small and stable enough that a scoped parser is both less
+code AND a smaller, more auditable surface than pulling in a general one. The literal-path
+`fs` requirement is a real Vercel deployment gotcha, not theoretical — a dynamic path
+argument to `readFileSync` can silently fail to be included in the traced serverless
+bundle, which would only surface as a production-only "file not found" that never
+reproduces locally; worth the one-function-per-file boilerplate to avoid.
+**Rejected:** A general Markdown library (`react-markdown`, `marked`, etc.) — would have
+handled more syntax than these four files need, at the cost of a new dependency and less
+control over exactly how each element maps to this app's existing Tailwind design tokens.
+A single `readContent(slug: string)` helper — simpler to write, but the dynamic-path
+file-tracing risk made the per-file-literal version worth the extra boilerplate. Moving
+*everything* including the "Last updated" date and branding footer into Markdown — passed
+over because those aren't prose that changes with the same cadence or for the same
+reasons as the actual page copy; forcing them through the same pipeline would have meant
+either complicating the parser for one-off cases or losing the ability to make one a
+computed value (the date) and the other a shared fixed element.
+
