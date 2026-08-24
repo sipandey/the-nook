@@ -1,0 +1,12 @@
+{
+  "name": "embedding-quality-spike",
+  "private": true,
+  "type": "module",
+  "description": "Throwaway quality-validation harness for docs/ARCHITECTURE.md §10.5 step 3 / §10.6.10. Not part of the web app — deliberately isolated with its own package.json/node_modules so this dependency never touches web/package.json. See RESULTS.md for findings; run.mjs for methodology.",
+  "dependencies": {
+    "@huggingface/transformers": "^4.2.0"
+  },
+  "scripts": {
+    "spike": "node run.mjs"
+  }
+}
