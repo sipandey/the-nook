@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { useEntries } from "@/lib/hooks/useEntries";
 import { periodRange, entriesInRange, topTag, type Period } from "@/lib/period";
@@ -21,13 +21,6 @@ const MOOD_LABEL: Record<number, string> = {
   4: "Good",
   5: "Great",
 };
-
-const TABS = [
-  { href: "/", label: "Home", icon: "home" },
-  { href: "/write", label: "Journal", icon: "edit_note" },
-  { href: "/playback", label: "Playback", icon: "play_circle" },
-  { href: "/manifestations", label: "Manifest", icon: "auto_awesome" },
-];
 
 function mostCommonMood(scores: number[]): string | null {
   if (scores.length === 0) return null;
@@ -92,22 +85,7 @@ export default function PlaybackPage() {
           </button>
         </main>
 
-        <nav className="fixed bottom-0 w-full z-50 rounded-t-xl bg-surface-container-low flex justify-around items-center px-gutter py-stack-loose pb-safe md:hidden shadow-[0_-4px_20px_rgba(0,0,0,0.02)] border-t border-outline-variant/10">
-          {TABS.map((tab) => (
-            <Link
-              key={tab.href}
-              href={tab.href}
-              className={`flex flex-col items-center justify-center transition-transform duration-300 active:scale-90 ${
-                tab.href === "/playback"
-                  ? "text-on-primary-container bg-primary-container rounded-full px-4 py-1"
-                  : "text-outline hover:text-primary"
-              }`}
-            >
-              <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} className="mb-1" />
-              <span className="text-label-sm">{tab.label}</span>
-            </Link>
-          ))}
-        </nav>
+        <BottomTabBar />
       </div>
     );
   }
@@ -195,22 +173,7 @@ export default function PlaybackPage() {
         </section>
       </main>
 
-      <nav className="fixed bottom-0 left-0 w-full z-50 flex justify-around items-center px-4 py-3 bg-inverse-surface/90 backdrop-blur-md rounded-t-xl border-t-0 shadow-sm md:hidden">
-        {TABS.map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`flex flex-col items-center justify-center transition-all duration-200 ${
-              tab.href === "/playback"
-                ? "bg-primary-container text-on-primary-container rounded-full px-4 py-1"
-                : "text-on-surface-variant hover:text-inverse-primary"
-            }`}
-          >
-            <MaterialIcon name={tab.icon} filled={tab.href === "/playback"} />
-            <span className="text-label-sm mt-1">{tab.label}</span>
-          </Link>
-        ))}
-      </nav>
+      <BottomTabBar variant="dark" />
     </div>
   );
 }

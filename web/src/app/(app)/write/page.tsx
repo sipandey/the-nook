@@ -2,7 +2,9 @@
 
 import { Suspense, useMemo, useState } from "react";
 import Link from "next/link";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
+import { AppHeader } from "@/components/AppHeader";
+import { BottomTabBar } from "@/components/BottomTabBar";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { MoodPicker, MOOD_OPTIONS } from "@/components/MoodPicker";
 import { TagInput } from "@/components/composer/TagInput";
@@ -17,7 +19,6 @@ type Stage = "voice" | "text" | "saved";
 
 function WriteContent() {
   const params = useSearchParams();
-  const router = useRouter();
   const dek = useSessionStore((s) => s.dek);
   const { data: entries } = useEntries();
   const saveEntry = useSaveEntry();
@@ -155,19 +156,8 @@ function WriteContent() {
   }
 
   return (
-    <div className="font-editorial-sans bg-surface text-on-surface min-h-screen flex flex-col antialiased">
-      <header className="bg-surface w-full top-0 sticky flex items-center justify-between px-container-padding h-16 shrink-0 z-10">
-        <button
-          type="button"
-          onClick={() => router.back()}
-          aria-label="Close"
-          className="text-on-surface-variant hover:bg-surface-container-high transition-colors p-2 -ml-2 rounded-full"
-        >
-          <MaterialIcon name="close" />
-        </button>
-        <h1 className="font-editorial-display text-headline-md text-primary">New Entry</h1>
-        <span className="w-10" />
-      </header>
+    <div className="font-editorial-sans bg-surface text-on-surface min-h-screen flex flex-col antialiased pb-24">
+      <AppHeader />
 
       <main className="flex-1 overflow-y-auto px-container-padding py-stack-gap flex flex-col relative max-w-3xl mx-auto w-full">
         <input
@@ -254,6 +244,8 @@ function WriteContent() {
           </div>
         </div>
       </footer>
+
+      <BottomTabBar />
     </div>
   );
 }
