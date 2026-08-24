@@ -171,9 +171,22 @@ export default function SignInPage() {
           </p>
         </div>
       </main>
-      <footer className="relative z-10 w-full py-6 flex justify-center items-center gap-2 text-outline">
-        <MaterialIcon name="lock" size={16} />
-        <span className="text-label-sm">End-to-End Encrypted</span>
+      <footer className="relative z-10 w-full py-6 flex flex-col items-center gap-3 text-outline">
+        <div className="flex items-center gap-2">
+          <MaterialIcon name="lock" size={16} />
+          <span className="text-label-sm">End-to-End Encrypted</span>
+        </div>
+        <nav className="flex items-center gap-4">
+          <a href="/about" className="text-label-sm text-outline hover:text-primary transition-colors">
+            About
+          </a>
+          <a href="/encryption" className="text-label-sm text-outline hover:text-primary transition-colors">
+            How we encrypt
+          </a>
+          <a href="/privacy" className="text-label-sm text-outline hover:text-primary transition-colors">
+            Privacy
+          </a>
+        </nav>
       </footer>
     </div>
   );

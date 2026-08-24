@@ -14,6 +14,12 @@ const isPublicRoute = createRouteMatcher([
   "/sign-up(.*)",
   "/sso-callback(.*)",
   "/api/webhooks(.*)",
+  // Marketing/legal pages — no journal content, no reason to require a
+  // session. See src/components/PublicPageChrome.tsx.
+  "/about",
+  "/encryption",
+  "/privacy",
+  "/delete-my-data",
 ]);
 
 // Dev-only visual QA bypass — see src/lib/preview.ts for the full picture.
