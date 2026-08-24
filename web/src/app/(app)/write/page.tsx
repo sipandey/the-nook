@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { AppHeader } from "@/components/AppHeader";
@@ -14,6 +14,7 @@ import { useEntries } from "@/lib/hooks/useEntries";
 import { useSessionStore } from "@/lib/store/session";
 import { computeStreak } from "@/lib/streak";
 import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
+import { useComposerDraft } from "@/lib/hooks/useComposerDraft";
 
 type Stage = "voice" | "text" | "saved";
 
@@ -39,6 +40,51 @@ function WriteContent() {
     [entries],
   );
 
+  const [showRestoredBanner, setShowRestoredBanner] = useState(false);
+
+  // Called once from inside useComposerDraft's own restore effect — see
+  // that file's comment on why this is a callback rather than state this
+  // component mirrors via its own effect. A restored mood only overrides
+  // the query-param-derived initial mood if the draft actually had one
+  // set — an empty draft shouldn't clobber an explicit incoming ?mood=
+  // from a Home-screen quick pick.
+  const { saveDraft, flushDraft, clearDraft } = useComposerDraft((restored) => {
+    setTitle(restored.title);
+    setText(restored.text);
+    if (restored.mood !== null) setMood(restored.mood);
+    setTags(restored.tags);
+    setShowRestoredBanner(true);
+  });
+
+  // Debounced autosave — see src/lib/hooks/useComposerDraft.ts. Only while
+  // actively composing text; the "voice" and "saved" stages don't touch
+  // these fields, and clearDraft() already runs on a successful save.
+  useEffect(() => {
+    if (stage !== "text") return;
+    saveDraft({ title, text, mood, tags });
+  }, [title, text, mood, tags, stage, saveDraft]);
+
+  // A mobile OS can kill a backgrounded tab well inside the debounce
+  // window above — flush immediately when the tab is hidden, not just on
+  // the debounce timer. The ref holds the live values (kept fresh every
+  // render, via its own effect — refs can't be written during render) so
+  // the listener itself only needs registering once.
+  const latestDraft = useRef({ title, text, mood, tags, stage });
+  useEffect(() => {
+    latestDraft.current = { title, text, mood, tags, stage };
+  });
+
+  useEffect(() => {
+    function handleVisibilityChange() {
+      if (document.visibilityState !== "hidden") return;
+      const current = latestDraft.current;
+      if (current.stage !== "text") return;
+      flushDraft({ title: current.title, text: current.text, mood: current.mood, tags: current.tags });
+    }
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", handleVisibilityChange);
+  }, [flushDraft]);
+
   async function handleSave() {
     if (!dek || !text.trim()) return;
     const plaintext = title.trim() ? `${title.trim()}\n\n${text.trim()}` : text.trim();
@@ -48,11 +94,21 @@ function WriteContent() {
       tags,
       dek,
     });
+    clearDraft();
     setSavedId(result.id);
     setStage("saved");
     // Fire-and-forget: the entry is already saved and shown to the user;
     // this shouldn't block or fail the save if it errors.
     void detectSignals(result.id, plaintext, dek);
+  }
+
+  function handleDiscardDraft() {
+    setTitle("");
+    setText("");
+    setMood(null);
+    setTags([]);
+    clearDraft();
+    setShowRestoredBanner(false);
   }
 
   if (stage === "voice") {
@@ -160,6 +216,22 @@ function WriteContent() {
       <AppHeader />
 
       <main className="flex-1 overflow-y-auto px-container-padding py-stack-gap flex flex-col relative max-w-3xl mx-auto w-full">
+        {showRestoredBanner && (
+          <div className="mb-4 flex items-center justify-between gap-3 rounded-lg bg-primary-container/40 px-4 py-2.5 text-label-sm text-on-primary-container">
+            <span className="flex items-center gap-2">
+              <MaterialIcon name="history" size={16} />
+              Restored your unsaved draft
+            </span>
+            <button
+              type="button"
+              onClick={handleDiscardDraft}
+              className="underline underline-offset-2 hover:opacity-80 transition-opacity"
+            >
+              Discard
+            </button>
+          </div>
+        )}
+
         <input
           value={title}
           onChange={(e) => setTitle(e.target.value)}

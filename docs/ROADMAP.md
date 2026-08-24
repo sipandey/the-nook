@@ -2,6 +2,11 @@
 
 Status: assessed 2026-08-24 against `main` @ `fe19e8a`.
 
+**Since assessed:** NK-01 (composer draft persistence) shipped — the first
+contradiction in §1's table below is resolved. Left as-is rather than rewritten,
+since it's an honest record of state at assessment time; §3's backlog row and §6's
+checklist are the current-status source of truth.
+
 This document is a reading of **state** — what is actually true of the build right
 now, and what to do about it in what order. [`ARCHITECTURE.md`](ARCHITECTURE.md)
 remains the source of truth for **intent**; where the two disagree, that one wins on
@@ -101,7 +106,7 @@ two · **L** multi-day with design thinking attached.
 
 | ID | Priority | Item | Why it matters | Size |
 |---|---|---|---|---|
-| NK-01 | Blocker | Composer draft persistence | Entry text lives in React state; refresh or tab eviction destroys it. Autosave to IndexedDB on a debounce, restore on mount. Proposed in §3/§7 since the doc was written, never built. | M |
+| NK-01 | ~~Blocker~~ Done | Composer draft persistence | Shipped: `src/lib/composer/draftStore.ts` + `src/lib/hooks/useComposerDraft.ts`. Debounced autosave (800ms) plus an immediate flush on `visibilitychange`, encrypted with the DEK before it touches IndexedDB, restored on mount with a dismissible banner. | M |
 | NK-02 | Blocker | Test suite for `lib/crypto/` | Zero tests exist anywhere in the repo. Cover: encrypt/decrypt round-trip, DEK wrap/unwrap under both passphrase and recovery code, Argon2id parameter pinning, GCM tamper detection. The product's core claim, currently unverified. | M |
 | NK-03 | Blocker | Generate real Supabase types | `src/lib/supabase/types.ts` is still the loose placeholder — no compile-time column checking anywhere. Needs Docker + project link (see `web/README.md` setup step 3). | S |
 | NK-04 | Blocker | CI that builds the app | The only workflow validates the agent-room scaffold. Add `tsc`, `eslint`, `next build` on every PR. | S |
@@ -192,7 +197,7 @@ Scope discipline is a deliverable. These are declined, not forgotten.
 Phase 0 plus Phase 1. Shipping before every box is ticked means shipping a product
 that contradicts its own marketing copy.
 
-- [ ] **No data-loss path.** Killing the tab mid-entry and reopening restores the draft.
+- [x] **No data-loss path.** Killing the tab mid-entry and reopening restores the draft.
 - [ ] **Crypto is tested.** Round-trip, both unwrap paths, and tamper detection pass in CI.
 - [ ] **CI blocks bad merges.** Typecheck, lint, and build all run on every PR.
 - [ ] **Failures are visible.** Production errors reach you without a user reporting them.

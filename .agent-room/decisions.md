@@ -493,3 +493,42 @@ separate system that drifts. Also rejected: including day-level time estimates;
 XS/S/M/L relative sizes convey the same sequencing information without implying a
 velocity that hasn't been measured.
 
+### 2026-08-24 — NK-01: composer draft persistence, encrypted in IndexedDB
+
+**Decision:** Built `src/lib/composer/draftStore.ts` (IndexedDB, one draft slot per
+Clerk user, same open/get/put/delete shape as `playback/narrativeCache.ts` and
+`search/vectorStore.ts`) and `src/lib/hooks/useComposerDraft.ts` on top of it, wired
+into `src/app/(app)/write/page.tsx`. The draft is AES-GCM-encrypted with the DEK
+before it touches disk — never plaintext at rest, matching the posture every other
+DEK-derived cache in this codebase already holds. Autosave debounces 800ms after the
+last keystroke; a `flushDraft()` path bypasses the debounce entirely and fires on
+`visibilitychange` turning `hidden`, since a mobile OS can kill a backgrounded tab
+well inside that window — verified in-browser by dispatching a synthetic
+`visibilitychange` under 200ms after typing and confirming the encrypted write landed
+in IndexedDB before any debounce timer could have fired. Restoring shows a dismissible
+"Restored your unsaved draft" banner with a Discard action, rather than silently
+repopulating the composer — the user should be able to tell "this is old, unsaved
+work" from "this is what I'm currently typing."
+**Why:** Roadmap item NK-01 (docs/ROADMAP.md), flagged as the sharpest contradiction
+between the product's own claim ("a quiet place to write") and its actual behavior —
+the composer held entry text in plain React state with zero persistence.
+**Two real bugs found and fixed via `eslint-plugin-react-hooks` 7.1.1's new checks
+(react-hooks/set-state-in-effect, react-hooks/refs), not by style preference:**
+(1) the initial design exposed a `restoredDraft` state value for the page component to
+mirror into its own title/text/mood/tags state via a `useEffect` — the classic
+"adjust state when a value changes" shape the newer lint rule specifically targets.
+Restructured so the hook takes an `onRestore` callback and invokes it once from
+*inside* its own async restore IIFE (the same shape `useDecryptedMap.ts` already uses
+successfully) — the setState calls never appear directly in an effect body, so the
+problem is structurally avoided rather than the rule being suppressed. (2) A ref
+tracking the latest draft values for the `visibilitychange` listener was written
+directly during render (`ref.current = {...}` at the top level of the component body)
+— moved into its own no-deps `useEffect` (runs after every render), the standard
+React pattern for "always-fresh ref without violating render purity."
+**Rejected:** keying the draft store by entry id / supporting multiple concurrent
+drafts — the composer only ever has one in-progress entry at a time, so a single fixed
+key (`"current"`) is correct, not a simplification that will need revisiting later.
+Also rejected: silently restoring without any banner — considered, but a composer that
+can silently repopulate with old text without explanation is confusing in exactly the
+way NK-01 exists to prevent trust erosion, not just data loss.
+
