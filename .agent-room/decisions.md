@@ -193,3 +193,70 @@ open (a DB error allows the call / skips the log write) rather than fail closed 
 chosen so a logging/rate-limit bug degrades to "occasionally under-limits," never to
 "blocks legitimate use of the app."
 
+### 2026-08-24 — Embedding-quality spike validated client-side search; use MiniLM-L12, not L6
+
+**Decision:** Ran the spike sequenced in `docs/ARCHITECTURE.md` §10.5 step 3: embedded
+20 realistic journal entries and ran 12 deliberately vocabulary-disjoint search queries
+against two candidate models (`Xenova/all-MiniLM-L6-v2`, `Xenova/all-MiniLM-L12-v2`) via
+`@huggingface/transformers`, run standalone in Node (isolated `package.json`, not added
+to `web/package.json`). Results and methodology committed at
+`docs/spikes/embedding-quality/` (`RESULTS.md`, `run.mjs`, `entries.mjs`). L12 hit 100%
+top-3 / 75% top-1 retrieval; L6 was noticeably worse (83% top-3, one near-total miss).
+Recorded the verdict as **go** for client-side semantic search (§10.3 option A), and
+recorded **L12, not L6** as the model to build against, updating §10.4/§10.5/§10.6.10.
+**Why:** §10.6.10 explicitly required this spike to have a real answer before any
+storage schema or search UI gets built — building either first would mean discovering a
+quality problem after committing to a schema, not before. L12 over L6 specifically
+matters because L6 is the smaller/more commonly-defaulted-to model in transformers.js
+examples and tutorials; picking it without testing would have been the natural default
+and the wrong one for this data — the near-total miss on "quitting a job" (ranked 12th
+of 20 candidate entries) shows L6's semantic matching genuinely breaks down on realistic
+queries, not just performs slightly worse.
+**Rejected:** Larger models (e.g. a MiniLM variant beyond L12, or a non-MiniLM
+architecture) — not tested, since L12 already hit 100% top-3 on the test set; chasing
+further quality on a small, deliberately-hard 12-query set would be optimizing past the
+point the spike can actually measure. OpenAI-embeddings fallback (§10.3 option B) — not
+needed given L12's result; would have added real per-entry OpenAI cost for a quality gap
+that turned out not to exist in this test. Keeping the spike's dependency
+(`@huggingface/transformers`) out of `web/package.json` — it's throwaway validation
+tooling, not shipped code; the real client-side embedding lib (still unbuilt) is a
+separate, deliberate addition to the app's actual dependencies when that work starts.
+
+### 2026-08-24 — Built Smart Search: opt-in-by-first-use, no separate settings flag
+
+**Decision:** Built `/search` (`src/app/(app)/search/page.tsx`) and its supporting lib
+(`src/lib/search/`: `vectorStore.ts` for encrypted IndexedDB storage,
+`embed.worker.ts` running `Xenova/all-MiniLM-L12-v2` per the validated spike,
+`useEmbeddingWorker.ts` for the request/response protocol, `useSemanticSearch.ts` for
+orchestration). Added `@huggingface/transformers` to `web/package.json` for real this
+time (the spike's copy stayed isolated in `docs/spikes/`). Rather than a separate
+Settings toggle, "opted in" is inferred directly from whether the user's IndexedDB
+vector store is non-empty — the first tap of "Enable Smart Search" on `/search` both
+starts indexing and IS the opt-in; there's no separate preference to fall out of sync
+with actual index state. Entry point is a link on the Journal list page, next to the
+existing keyword search bar. Worker only gets constructed on the first `embed()` call
+(not on `/search` page load), so visiting the page before tapping "Enable" never
+triggers the model download. Vectors are `encryptText`/`decryptText`'d with the DEK
+(same primitives as entry content) before ever touching IndexedDB — no code path writes
+a raw vector to disk. On each `/search` load, entries present but not yet indexed
+(added since the last visit) are embedded automatically in the background — the initial
+opt-in covers future entries too, not just the ones that existed at opt-in time.
+**Why:** A settings-table-backed toggle would need to stay in sync with actual
+IndexedDB contents (what if indexing failed partway, or IndexedDB was cleared by the
+browser?) for no real benefit — deriving "enabled" from the store's own contents can't
+drift from reality by construction. Lazy worker construction and the explicit
+opt-in-with-size-disclosure screen directly implement §10.6.7's requirement that
+visiting the app, or even visiting `/search`, must never trigger an unannounced ~34MB
+download. Encrypting vectors before storage implements §10.6.6, treated as
+non-negotiable per that section, not an optional hardening pass added after the fact.
+**Rejected:** A Settings-page toggle for enabling/disabling search — rejected per above
+(state-sync risk, no benefit over inferring from the store). Sending decrypted entry
+text to the worker for it to also handle IndexedDB reads/writes — rejected to keep the
+worker scoped to exactly one job ("turn text into a vector"), mirroring how
+`src/lib/ai/openai.ts` stays scoped to "talk to OpenAI" and never touches
+auth/DB/storage; encryption and storage both stay on the main thread, where the DEK
+already lives. Pruning cached vectors when their entry is deleted — rejected as
+unnecessary complexity: search results are always intersected with the live entries
+list before rendering, so a stale vector for a deleted entry can never surface, it's
+just inert until the next full index clear.
+

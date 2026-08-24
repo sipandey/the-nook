@@ -34,6 +34,7 @@ Every screen in the design canvas is wired to real data — Clerk auth, Supabase
 - **Playback** (`src/app/(app)/playback/`) — week/month/year stats from real mood/tag data, an AI-generated story recap (mood trend, a verbatim highlight quote, a "letter from your past self," and a then-vs-now comparison that only appears when a genuine cross-time pair of entries actually exists).
 - **Manifestations** (`src/app/(app)/manifestations/`) — CRUD with category/cadence/auto-detect, and **automatic signal detection**: after each entry saves, it's classified against your active manifestations in the background and matches get recorded — conservatively, so the signal count means something.
 - **Settings** (`src/app/(app)/settings/`) — AI tone (stored in Clerk's `unsafeMetadata`, used everywhere prompts are generated), privacy/encryption info, passphrase change, notification preferences (wired to the schema), data export (client-side decrypt + JSON download), full account deletion (Supabase data + Clerk account, in that order), Clerk's account management UI.
+- **Smart Search** (`src/app/(app)/search/`, `src/lib/search/`) — opt-in semantic search over your journal, entirely client-side: entries are embedded on-device (`Xenova/all-MiniLM-L12-v2`, in a Web Worker) and the resulting vectors are encrypted with the DEK before being cached in IndexedDB. No server round trip, no OpenAI call — see `docs/ARCHITECTURE.md` §10.3/§10.4 and the quality spike at `docs/spikes/embedding-quality/`.
 
 ## Known gaps (flagged deliberately, not forgotten)
 
