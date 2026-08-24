@@ -23,15 +23,6 @@ const isPublicRoute = createRouteMatcher([
 const PREVIEW_MODE =
   !process.env.VERCEL_ENV && process.env.NEXT_PUBLIC_PREVIEW_MODE === "1";
 
-// Clerk's publishable-key prefix (pk_live_ vs pk_test_) is the stable,
-// public signal for "which kind of instance is this" — used here instead
-// of an internal/undocumented SDK helper. See the frontendApiProxy note
-// below for why this matters: the proxy should only be active for a
-// production instance, not local dev's pk_test_ key.
-const IS_PRODUCTION_CLERK = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? "").startsWith(
-  "pk_live_",
-);
-
 /**
  * clerkMiddleware() itself — not just an unguarded auth.protect() call
  * inside it — performs a dev-instance "browser handshake" redirect to
@@ -39,25 +30,24 @@ const IS_PRODUCTION_CLERK = (process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY ?? ""
  * callback logic runs. Skipping auth.protect() alone doesn't avoid that;
  * preview mode has to bypass clerkMiddleware() entirely.
  *
- * frontendApiProxy: production Clerk routes its Frontend API through this
- * app's own domain at /__clerk (see the matching ClerkProvider proxyUrl
- * in src/app/layout.tsx) instead of a dedicated clerk.* subdomain — no
- * DNS changes needed on Vercel. @clerk/nextjs (7.x) *can* auto-detect this
- * from Vercel's own env vars, but only client-side and only when
- * VERCEL_TARGET_ENV === "production" — Preview deployments with live keys
- * would silently miss it. Set explicitly here so both Production and
- * Preview behave the same way, not dependent on that env-var nuance.
- * Gated on IS_PRODUCTION_CLERK so local dev's pk_test_ key keeps talking
- * to Clerk directly, unchanged. Requests to /__clerk/* are handled
- * entirely inside clerkMiddleware() before the callback below ever runs,
- * so this doesn't interact with isPublicRoute/auth.protect() at all.
+ * No frontendApiProxy/proxyUrl here — deliberately. An earlier version of
+ * this file routed Clerk's Frontend API through this app's own /__clerk
+ * path, based on a Clerk dashboard checklist step that turned out to
+ * describe an in-progress, pre-migration state. Once the production
+ * domain migration to creator-ai.in actually completed, Clerk issued a
+ * publishable key scoped to the dedicated clerk.creator-ai.in subdomain
+ * (verified by decoding the key: pk_live_… base64-decodes to
+ * "clerk.creator-ai.in$") — the DNS-CNAME method (clerk, clk._domainkey,
+ * clk2._domainkey, clkmail records), not the app-proxy method. Keeping
+ * the /__clerk proxy code active after that point actively broke auth:
+ * it forced requests through this app's own middleware instead of
+ * letting them reach clerk.creator-ai.in directly, where they're
+ * correctly attributed. See .agent-room/anti-patterns.md.
  *
  * signInUrl/signUpUrl: without these, auth.protect()'s redirect for an
  * unauthenticated visitor falls back to Clerk's hosted Account Portal
  * instead of this app's own /sign-in and /sign-up pages (built custom —
- * see those routes; this app never used Clerk's hosted UI). On the
- * production instance that fallback surfaced as a redirect to
- * accounts.<old-vercel-project>.vercel.app, not creator-ai.in — set
+ * see those routes; this app never used Clerk's hosted UI). Set
  * explicitly, as plain paths (not full URLs), so the redirect always
  * stays on whatever domain the request actually came in on.
  */
@@ -69,11 +59,7 @@ export default PREVIEW_MODE
           await auth.protect();
         }
       },
-      {
-        signInUrl: "/sign-in",
-        signUpUrl: "/sign-up",
-        ...(IS_PRODUCTION_CLERK ? { frontendApiProxy: { enabled: true } } : {}),
-      },
+      { signInUrl: "/sign-in", signUpUrl: "/sign-up" },
     );
 
 export const config = {
@@ -81,6 +67,5 @@ export const config = {
     // Skip Next.js internals and static assets, always run for API routes.
     "/((?!_next|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
     "/(api|trpc)(.*)",
-    "/__clerk/(.*)",
   ],
 };
