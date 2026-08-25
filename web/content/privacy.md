@@ -16,7 +16,7 @@ The short version is on the [encryption page](/encryption): your entries are enc
 
 **Supabase** — hosts our database. They store your encrypted entries and the in-the-clear metadata above. They don’t have your encryption key either.
 
-**OpenAI** — powers the optional AI features (daily prompts, playback story generation, voice transcription, manifestation-signal detection). To do this, your device decrypts the relevant entry text locally and sends it, over an encrypted connection, for that one request only. This is the one point where your written words exist outside your device, even briefly — see the [encryption page](/encryption) for the full detail. We don’t log or store what’s sent. If you never use the AI features, this never happens.
+**OpenAI** — powers the optional AI features: playback story generation, voice transcription, and manifestation-signal detection. (Daily prompts don't send any entry content — they're generic per your chosen tone, not personalized.) To use one of the three that do, your device decrypts the relevant entry text locally and sends it, over an encrypted connection, for that one request only — see the [encryption page](/encryption) for the full detail, including OpenAI's own retention window. We don't log or store what's sent. You can turn all three off entirely from Settings → Privacy & Security; if you do, or if you never use them, this never happens.
 
 **Vercel** — hosts the app itself.
 

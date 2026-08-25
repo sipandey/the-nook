@@ -26,9 +26,11 @@ Only ciphertext: the wrapped data key, and each entry’s encrypted content. A h
 
 There is no “forgot your journal passphrase” server-side reset. That’s not an oversight; a resettable passphrase would mean someone other than you could eventually get in. The one backup path is a 12-word recovery phrase, shown once when you set things up, which wraps the same data key under a second, independently-derived key. Lose both the passphrase and the recovery phrase, and the entries are permanently unreadable — including to us.
 
-### 6. AI features are the one place plaintext exists off your device — briefly
+### 6. AI features are the one place plaintext exists off your device — briefly, and you can turn it off entirely
 
-To generate a daily prompt or a playback story, your device decrypts the relevant entries locally, then sends that plaintext over an encrypted connection to a serverless function for exactly one request to OpenAI. That function is built not to log or persist what it receives, and OpenAI processes it as part of generating the response, not to train on it as a matter of policy for API traffic. This is a real, deliberate exception to “we never see your plaintext” — named here plainly rather than glossed over, because a privacy claim you have to squint to find the caveat in isn’t an honest one.
+To generate a playback story, transcribe a voice note, or detect progress toward a manifestation, your device decrypts the relevant entries locally, then sends that plaintext over an encrypted connection to a serverless function for exactly one request to OpenAI. That function is built not to log or persist what it receives. OpenAI's API traffic isn't used to train their models by default (true since March 2023) — but it is retained by OpenAI itself for up to 30 days for abuse monitoring, unless longer retention is required by law. That's a real, checkable fact, not covered by "we don't retain it" alone, since that sentence is about us, not them.
+
+This is a real, deliberate exception to “we never see your plaintext” — named here plainly rather than glossed over, because a privacy claim you have to squint to find the caveat in isn’t an honest one. If you'd rather nothing you write ever leaves your device, turn AI features off entirely from Settings → Privacy & Security — playback stories, voice transcription, and manifestation-signal detection all stop; writing, browsing, search, streaks, tags, and export are unaffected. Daily prompts don't send entry content in the first place, so they're unaffected either way.
 
 ## What this doesn’t protect against
 

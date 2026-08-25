@@ -17,7 +17,7 @@ export default function AboutPage() {
 
         <div className="flex items-center gap-2 text-outline mt-stack-loose">
           <MaterialIcon name="lock" filled size={16} />
-          <span className="text-label-sm">End-to-End Encrypted, by design, not by policy</span>
+          <span className="text-label-sm">End-to-End Encrypted, by design — AI features are optional, and yours to turn off</span>
         </div>
       </main>
 
