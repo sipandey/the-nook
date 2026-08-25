@@ -1411,3 +1411,108 @@ identically to `/sign-in` regardless.
 
 <!-- no-log: routine update to ROADMAP.md's launch-ready checklist annotation, reflecting real-device iOS install evidence from this session's earlier conversation — no decision or anti-pattern worth recording -->
 
+### 2026-08-25 — NK-06: Sentry error monitoring, and what "safe defaults" actually required
+
+**Decision:** Integrated `@sentry/nextjs` (user's explicit vendor choice,
+real DSN provided directly in conversation) app-wide, active only in
+real production. The entire design effort went into the data-collection
+configuration, not the wiring: every category Sentry could send by
+default is explicitly disabled in `src/lib/monitoring/sentryOptions.ts`,
+console breadcrumbs are dropped outright, and Session Replay is never
+installed. Design: `docs/plans/2026-08-25-sentry-error-monitoring-design.md`;
+plan: `docs/plans/2026-08-25-sentry-error-monitoring-plan.md`.
+**Why:** NK-06 was the last unchecked launch-readiness blocker — a crash
+in unlock or decrypt has been completely silent in production this
+entire time. The roadmap item itself already named the constraint:
+"must exclude entry content from payloads." For an app whose entire
+credibility rests on plaintext never leaving the device, a careless
+error-monitoring integration is exactly the kind of thing that quietly
+undermines the product's own claim while looking like unrelated
+infrastructure work.
+
+**The single most important finding of this feature: `sendDefaultPii:
+false` — the approved design's original safeguard — does not prevent
+the actual dangerous default.** Verified directly against the installed
+`@sentry/core@10.71.0` type definitions, not documentation summaries
+(which had already led the design astray once — see below).
+`sendDefaultPii` is deprecated in this SDK version in favor of a newer
+`dataCollection` option, and several of its categories default to
+**on** regardless of `sendDefaultPii`'s value. Most critically,
+`dataCollection.stackFrameVariables` defaults to `true`: local variable
+*values* in a crashing function's stack frame, sent as-is. This app
+holds decrypted journal text in local variables in multiple places
+(`write/page.tsx`'s `handleSave()` — the `combined` variable literally
+holds the plaintext about to be saved) — a crash while one was in scope
+would have sent the actual journal entry to Sentry, under a
+configuration the approved design believed was safe. Caught mid-
+implementation, before any code shipped against the wrong assumption,
+specifically because the plan called for checking option names against
+the real installed package rather than trusting the design doc as
+final. The design doc was revised in place once this was found, with
+the correction stated plainly rather than absorbed silently.
+
+**A second inaccuracy, found the same way, corrected the same way:**
+the design also claimed `data-sentry-mask` (added to the passphrase
+input, recovery-phrase display, and composer fields) would keep DOM
+click/keypress breadcrumbs from including their content. Checked
+against the installed package: `data-sentry-mask` exists only in
+`@sentry/replay`'s source, not `@sentry/browser-utils` (which builds
+the actual DOM breadcrumbs via `htmlTreeAsString`) — since this design
+never installs Session Replay, the attribute currently does nothing.
+Separately, `htmlTreeAsString` itself was checked and confirmed to
+build only a CSS-selector-style description (tag/class/id), never
+`.textContent`/`.value` — so the risk this attribute was meant to
+address was smaller than described in the first place. Kept in the
+code anyway, honestly labeled as forward-compatible insurance (correct
+if Replay is ever added later without a full re-audit) rather than as
+active protection today.
+
+**Real, unglamorous errors surfaced by actually running the tooling,
+not just reading about it:** `next.config.ts`'s `withSentryConfig` call
+originally included `disableLogger: true` — the build itself warned
+this option is deprecated *and* "not supported with Turbopack" (this
+app's build tool), so it was dead configuration, not a real setting;
+removed. `sentryOptions.ts`'s `beforeSend` destructuring-to-discard
+pattern (`const { data: _data, ... }`) tripped this repo's
+`@typescript-eslint/no-unused-vars` rule, which has no underscore-prefix
+exemption configured — fixed by deleting keys from a shallow copy
+instead of destructuring past them.
+
+**Verification had a real, honestly-reported limit — investigated
+thoroughly, not glossed over.** What *was* directly confirmed: the
+data-collection policy's own logic (9 unit tests, TDD'd); the correct
+DSN and `enabled: true` baked into the real build output; Sentry's own
+`debug: true` logging showing `Integration installed` for every expected
+integration and `Captured error event` for deliberately-triggered test
+errors, with `__sentry_captured__: true` on the resulting console error;
+and — via a raw `fetch()` to the real DSN's ingest URL — that genuine
+network egress from this sandboxed environment to Sentry's actual
+servers works (a real `400` response for a deliberately malformed test
+body, not a connectivity failure). What was **not** directly observed:
+the SDK's own internal transport request actually leaving the browser.
+Monkey-patching `fetch`/`sendBeacon`/`XMLHttpRequest` to intercept it
+caught nothing — most likely because Sentry's transport binds its
+network primitives at `Sentry.init()` time, before a `javascript_exec`
+call issued after page load can patch them, not evidence the request
+never happened. `read_network_requests` (the Browser pane's own
+protocol-level tap, unaffected by that timing issue) also showed zero
+matching requests across multiple waits up to 20+ seconds, which is the
+more trustworthy signal but still not conclusive either way. Reverted
+the temporary `debug: true` and forced-`enabled: true` changes cleanly
+(confirmed via `git diff` showing no residual change) rather than ship
+either as real config. This is a genuine, narrow gap in what this
+session's tools could confirm — the same class of limitation as NK-09's
+push-permission prompt and the AI-privacy work's Clerk-metadata write —
+not a claim that the feature doesn't work. A first real check of the
+Sentry dashboard after this ships is the honest remaining step, and
+belongs to the account owner.
+
+**Also deliberately deferred, stated rather than silently skipped:**
+source-map upload (readable stack traces in the Sentry dashboard) needs
+an `authToken` plus org/project slugs the user would need to generate —
+`withSentryConfig` is called with none of them, which makes it skip
+upload gracefully rather than fail the build. Real follow-up, not
+required for error capture itself to function.
+
+Full sweep (typecheck/lint/test/build) all exit 0.
+
