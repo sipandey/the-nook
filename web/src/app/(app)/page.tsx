@@ -15,6 +15,7 @@ import { useSessionStore } from "@/lib/store/session";
 import { useTone } from "@/lib/hooks/useTone";
 import type { Tone } from "@/lib/tone";
 import { PREVIEW_MODE, getPreviewDailyPrompt } from "@/lib/preview";
+import { getTodaysEntry } from "@/lib/todaysEntry";
 
 function useDailyPrompt(tone: Tone) {
   return useQuery({
@@ -86,6 +87,12 @@ export default function Home() {
     [entries],
   );
 
+  // Cosmetic only — the href stays plain /write either way. The
+  // composer's own on-mount getTodaysEntry check is what actually
+  // branches into append mode; see docs/plans/2026-08-24-append-to-
+  // todays-entry-design.md.
+  const todaysEntry = useMemo(() => getTodaysEntry(entries ?? []), [entries]);
+
   const recentEntries = useMemo(() => (entries ?? []).slice(0, 3), [entries]);
   const snippets = useDecryptedEntries(recentEntries, dek);
 
@@ -138,7 +145,7 @@ export default function Home() {
             className="flex flex-1 items-center justify-center gap-2 rounded-full bg-primary px-4 py-3 text-label-sm text-on-primary hover:bg-surface-tint transition-colors active:scale-95"
           >
             <MaterialIcon name="edit_document" size={16} />
-            New entry
+            {todaysEntry ? "Continue today's entry" : "New entry"}
           </Link>
           <Link
             href="/write?mode=voice"
