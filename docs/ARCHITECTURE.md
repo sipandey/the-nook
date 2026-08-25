@@ -191,6 +191,22 @@ sequenceDiagram
     Note over C: DEK held in memory only for the session
 ```
 
+**"Held in memory only for the session" now means something specific:**
+`src/lib/hooks/useAutoLock.ts` (mounted from `UnlockGate.tsx`, the same
+component this sequence's "DEK held in memory" note refers to) wipes it
+after the app has spent 60 continuous seconds hidden
+(`document.visibilitychange`), re-locking automatically rather than
+relying only on a full reload/kill to clear it. Deliberately a grace
+period, not an instant lock: switching away briefly (a text reply mid-
+entry) doesn't interrupt writing, but leaving the app backgrounded for
+real does re-lock it — closes a real gap where iOS/Android typically
+*suspend* a backgrounded PWA rather than killing it, so the in-memory
+key would otherwise survive indefinitely. Applies uniformly whether
+installed to the home screen or used in a regular browser tab — the
+underlying event is identical in both. A manual "Lock now" control in
+Settings calls the same `lock()` action directly, for locking before
+handing the device to someone rather than waiting on the timeout.
+
 ### 6.3 Create a journal entry
 
 ```mermaid

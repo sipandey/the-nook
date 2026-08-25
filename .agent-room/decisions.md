@@ -1232,3 +1232,86 @@ set, which surfaced as an unrelated-looking `/api/keys` 500 and a Clerk
 `auth()` error; resolved by rebuilding with the flag set, not by touching
 any auth code. Full sweep (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — Auto-lock on backgrounding, after a 60-second grace period
+
+**Decision:** Built `src/lib/hooks/useAutoLock.ts`, mounted once inside
+`UnlockGate.tsx`: listens for `document.visibilitychange`, and if the
+app stays hidden for 60 continuous seconds, calls the session store's
+`lock()` action (which existed already but had never been invoked
+anywhere in the app). A grace period, not an instant lock, and not a
+configurable Settings value — one fixed default. Also added a manual
+"Lock now" row to Settings, wiring up `lock()` a second way.
+**Why:** User noticed that minimizing the installed PWA and reopening it
+never re-prompted for the passphrase, while force-quitting did — and
+asked for this to be designed properly rather than patched. Root cause
+wasn't a bug: `useSessionStore` is deliberately in-memory-only (by
+design, so a reload/kill wipes it), but nothing had ever been built to
+proactively re-lock on backgrounding, and iOS/Android typically
+*suspend* a backgrounded PWA rather than killing it — so the in-memory
+DEK could survive indefinitely with the app just sitting in the app
+switcher. `content/encryption.md` already states the app doesn't protect
+against "someone who has your unlocked device in hand," but there's a
+real, meaningfully different gap between that and the journal staying
+silently unlocked for hours. A grace period (not instant) was chosen
+because the alternative — locking the instant the app leaves the
+foreground — would mean re-entering the passphrase every time a
+notification or a text reply pulls focus away mid-entry, which is
+annoying enough that a user would reasonably come to resent the
+feature meant to protect them. 60 seconds specifically, fixed rather
+than a new Settings toggle: one sensible default, no new surface area to
+build, explain, or maintain.
+**No race with the composer's existing draft-autosave:**
+`useComposerDraft.ts` already flushes the in-progress draft to
+IndexedDB (DEK-encrypted) within ~200ms of the same
+`document.visibilitychange` event going hidden — both listeners fire off
+the identical event, and the flush completes 59+ seconds before this
+hook's timer could ever fire. Nothing needed to change there.
+**A real bug was suspected during verification, investigated properly,
+and turned out not to exist:** dispatching a synthetic `hidden` then
+`visible` event in the browser with a short simulated grace period
+appeared to show the lock firing anyway despite the "visible" dispatch —
+looked exactly like a broken cancellation path. Rather than assume that
+and patch around it, added per-call timestamped logging and re-ran the
+test: the real wall-clock delay between two separate tool-driven
+`javascript_exec` calls in this sandbox turned out to exceed the
+artificially-shortened grace period being tested against (over 8 real
+seconds elapsed for what was requested as a 1-second wait, due to tool
+round-trip overhead) — the timer had genuinely already fired for real
+before the cancel dispatch happened. Confirmed the actual logic is
+correct by dispatching `hidden` and `visible` back-to-back in a single
+tool call (eliminating the round-trip gap): the same `timeoutId` was
+correctly seen and cleared, and the lock did not fire even 48 seconds
+later. Worth remembering: this sandbox's own tool-call round-trip
+latency can exceed several seconds, which matters when hand-simulating
+a short timer window — use back-to-back same-call dispatches, or a
+window generously longer than the round-trip overhead, not a bare
+assumption that two sequential tool calls happen near-instantly.
+**A second, unrelated environment quirk hit during the same verification
+pass:** a `next start` process from several rebuilds earlier in this
+session had become unkillable from a fresh Bash invocation
+(`kill`/`pkill`, even with the sandbox disabled, returned "operation not
+permitted" on a same-user process) — not a Vercel/Browser-pane-managed
+process (confirmed via `preview_list`), just a plain orphaned background
+job the sandbox no longer had signal permission for. The tab kept
+serving stale build output against it (a `ChunkLoadError` referencing a
+chunk hash from an old build), which looked exactly like a real app
+regression until traced back. Fixed by starting the fresh server on a
+different port (3111) instead of fighting for the stale one — simpler
+and just as valid for local verification.
+**Live-verified:** the timer firing (correctly locks) and the
+cancellation path (correctly doesn't, even well past the real window),
+both via direct timestamped evidence, not assumption. Also verified live:
+composer text survives a background/foreground cycle well under 60s with
+no interruption or prompt; the "Lock now" Settings row renders correctly
+and its click handler runs without error. **Not verified live, and
+can't be, structurally:** the actual passphrase-unlock screen rendering
+after a real lock — `PREVIEW_MODE` deliberately never fakes a Clerk
+session (2026-08-22 entry) and its `UnlockGate` branch auto-re-unlocks
+via `getPreviewDek()` any time `isUnlocked` goes false, so a locked state
+can't be visually observed in this sandbox's preview mode — same
+structural limitation the AI-privacy-controls work hit verifying its own
+Clerk-metadata toggle. `UnlockGate`'s `isUnlocked → show unlock screen`
+branch itself is pre-existing and unchanged by this feature, already
+exercised by every real sign-in. Full sweep (typecheck/lint/test/build)
+all exit 0.
+
