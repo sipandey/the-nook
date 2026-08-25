@@ -302,3 +302,53 @@ picking a number per-page. This one likely predates any of this
 session's work and had just never been noticed with few enough entries
 to not matter; worth a quick grep (`grep -rn "BottomTabBar" src/app`)
 after any future layout change to confirm every renderer still matches.
+
+### 2026-08-25 — A bare (non-`NEXT_PUBLIC_`) env var read client-side silently evaluates to `undefined`, with no error
+
+**What happened:** After shipping Sentry error monitoring (NK-06) and
+deploying, a deliberately-triggered test error on the real production
+site never reached Sentry — no request, no error, nothing. Investigated
+by intercepting the actual client SDK's resolved options in the browser
+(`window.__SENTRY__`'s registered client's `_options`), not by guessing:
+`enabled: false`, on `https://creator-ai.in`, in real production. The
+DSN, `dataCollection` scrubbing config, and everything else was correct
+— only `enabled` was wrong.
+**Root cause:** `src/lib/monitoring/sentryEnabled.ts` gates on
+`process.env.VERCEL_ENV === "production"`, mirroring
+`src/lib/preview.ts`'s existing `!process.env.VERCEL_ENV` check — reused
+as an established, already-working pattern. It wasn't actually proven to
+work client-side: `preview.ts`'s check is `AND`-ed with a second,
+`NEXT_PUBLIC_`-prefixed condition that's never true in real production
+regardless, so that code path produces the correct *result* in
+production whether or not `VERCEL_ENV` is actually readable in the
+browser — the bug was latent and invisible there. Sentry's gate had no
+such second condition, so the same underlying gap became a real, visible
+bug the moment nothing else was masking it. The actual mechanism: Vercel
+sets `VERCEL_ENV` server-side/at build time automatically (confirmed
+against Vercel's own docs), but Next.js never inlines a bare,
+non-`NEXT_PUBLIC_`-prefixed `process.env.*` reference into client-side
+code on its own — confirmed against this Next.js version's own bundled
+docs (`node_modules/next/dist/docs/.../config/env.md`), not assumed.
+Client-side, `process.env.VERCEL_ENV` was simply `undefined`, everywhere,
+including real production.
+**Fixed** via `next.config.ts`'s documented `env` field —
+`env: { VERCEL_ENV: process.env.VERCEL_ENV }` — which explicitly
+whitelists a build-time-known value for inclusion in the client bundle,
+independent of its name. Verified by building locally with
+`VERCEL_ENV=production` set (simulating the real Vercel build
+environment) and grepping the actual compiled client chunk for the
+literal `enabled:!0` (minified `true`) next to the real DSN string —
+not assumed fixed from the diff alone.
+**Avoid:** A `process.env.X` read with no `NEXT_PUBLIC_` prefix is
+silently `undefined` in any client-side/browser code path, full stop —
+there is no automatic exception for Vercel's own system variables just
+because Vercel documents them as "available at build and runtime" (that
+availability is scoped to the server/build process, not the shipped
+browser bundle). Don't infer a pattern is proven correct from "the
+overall behavior looks right" when a second, independent condition could
+be silently carrying the correct result on its own — trace whether the
+*specific* variable you're about to reuse the pattern for was ever
+actually exercised, not just whether the code that uses it happened to
+produce the right answer. When in doubt, verify by reading the actual
+compiled output for the literal value, in the actual target environment
+— not by reasoning about what "should" happen.

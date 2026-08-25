@@ -3,7 +3,22 @@ import { withSerwist } from "@serwist/turbopack";
 import { withSentryConfig } from "@sentry/nextjs";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Exposes the server/build-time VERCEL_ENV value to client-side code
+  // under the same key name — required for src/lib/monitoring/sentryEnabled.ts
+  // (and, defensively, src/lib/preview.ts's already-shipped check) to
+  // read process.env.VERCEL_ENV correctly in the browser bundle. Vercel
+  // makes VERCEL_ENV available server-side/at build time automatically,
+  // but Next.js never inlines a bare (non-NEXT_PUBLIC_-prefixed) env var
+  // into client code on its own — confirmed live against the real
+  // production deployment: Sentry's client SDK was silently initializing
+  // with `enabled: false` everywhere, since process.env.VERCEL_ENV was
+  // simply undefined in the browser bundle. This `env` field (per
+  // Next.js's own docs — node_modules/next/dist/docs/.../config/env.md)
+  // is the documented way to explicitly whitelist a specific value for
+  // client-bundle inclusion regardless of its name.
+  env: {
+    VERCEL_ENV: process.env.VERCEL_ENV,
+  },
 };
 
 // @serwist/next (the webpack-based Serwist integration) silently no-ops
