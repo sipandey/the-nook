@@ -170,6 +170,19 @@ git commit -m "Return updated_at from GET /api/entries"
 
 ### Task 4: `PATCH /api/entries/[id]` — append endpoint
 
+**Deviation from this plan as originally written, recorded after the fact:**
+verifying this task against a real signed JWT (not the service-role key)
+surfaced that the local Supabase instance had never granted the
+`authenticated` role table privileges on anything — the same class of gap
+`0008_grant_service_role.sql` found for `service_role`, one layer up and
+much wider (it blocks every route's normal per-request client, not just the
+cron). Fixed with `0010_grant_authenticated.sql` before continuing; see
+that migration's own comment for the full reasoning. Not something this
+plan anticipated, since Task 4 Step 2 as originally written assumed
+falling back to reasoning-through-the-logic rather than a real authenticated
+round trip — a hand-signed local JWT turned out to make the real round
+trip possible after all, which is how this surfaced.
+
 **Files:**
 - Modify: `web/src/app/api/entries/[id]/route.ts` (add a `PATCH` export
   alongside the existing `DELETE`)
