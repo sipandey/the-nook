@@ -220,7 +220,9 @@ export function ManifestationForm({
                   <h2 className="text-body-lg text-on-background">AI Auto-Detect</h2>
                 </div>
                 <p className="text-body-md text-on-surface-variant pr-4">
-                  Automatically link journal entries that resonate with this intention.
+                  Sends each new entry&rsquo;s text to OpenAI to check whether it relates
+                  to this intention. Off by default; only used for entries you write
+                  after turning it on. Governed by the master AI switch in Settings.
                 </p>
               </div>
               <span className={`h-6 w-11 flex-shrink-0 rounded-full relative mt-1 ${autoDetect ? "bg-primary" : "bg-surface-variant"}`}>
