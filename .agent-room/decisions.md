@@ -1364,3 +1364,48 @@ resolved, confirming the real content swapped in at the same position
 with no visible layout jump — the whole point of sizing the skeleton to
 match. Full sweep (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — NK-22: a plain `<link rel="preconnect">` isn't enough — needed `ReactDOM.preconnect()`
+
+**Decision:** Added `src/components/ClerkPreconnect.tsx` — a tiny Client
+Component that calls `ReactDOM.preconnect("https://clerk.creator-ai.in",
+{ crossOrigin: "anonymous" })` during render — mounted once in
+`layout.tsx`. Not a JSX `<link rel="preconnect">` element, despite that
+being the obvious first approach.
+**Why:** Third follow-up against fresh production Speed Insights data:
+RES 62, FCP itself still "Poor" at 3.89s P75. Route breakdown named
+`/sign-in` as the worst FCP route with a real sample count. Curling
+production directly showed why: Clerk's JS SDK loads from
+`clerk.creator-ai.in` (its own dedicated Frontend API subdomain) via an
+async `<script>` Clerk injects itself, with no resource hint ahead of it
+anywhere in the document — a genuine third-party origin paying full
+DNS+TLS setup cost before the browser can even issue the request.
+**The plain `<link>` approach was tried first and silently failed —
+worth recording precisely, not just "use the other API."** Adding
+`<link rel="preconnect" href="..." crossOrigin="anonymous" />` — first
+wrapped in an explicit `<head>`, then as a bare element per React 19's
+documented auto-hoisting — rendered correctly in both cases, but in the
+actual generated HTML output landed at position 32 in `<head>`, *after*
+Clerk's own script tag at position 24. A hint the browser only sees
+after it's already started the connection it was meant to preempt does
+nothing. This was only caught by writing a script to walk the real build
+output and print `<head>` children in document order — a screenshot or
+a "does the tag exist" check would have missed it entirely, since the
+tag genuinely was present and correctly formed, just uselessly placed.
+Root-caused via Next's own bundled docs
+(`generate-metadata.md`'s "Resource hints" section, not recalled from
+memory): the dedicated `ReactDOM.preconnect`/`preload`/`prefetchDNS`
+APIs are explicitly what `next/font` and `next/script` use internally
+for correct head-priority scheduling — a plain declarative `<link>`
+doesn't receive the same treatment, apparently deprioritized as a
+"hint" relative to scripts/stylesheets regardless of source position in
+the JSX tree. Switching to the dedicated API moved the hint to position
+1 — before every other script, including Clerk's own — confirmed the
+same way, by re-inspecting the real build output, not by trusting that
+switching APIs "should" fix it.
+**Verified:** typecheck/lint/test/build all exit 0; live no-regression
+pass on Home and About confirmed no console errors introduced by the new
+component. Not separately investigated: `/sso-callback`'s 8.44s FCP
+sample — a single data point, too little to read into on its own, and
+this fix (same root layout, same preconnect) already benefits it
+identically to `/sign-in` regardless.
+

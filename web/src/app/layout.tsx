@@ -3,6 +3,7 @@ import { Geist, Geist_Mono, Newsreader, Hanken_Grotesk } from "next/font/google"
 import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SpeedInsights } from "@vercel/speed-insights/next";
+import { ClerkPreconnect } from "@/components/ClerkPreconnect";
 import { Providers } from "./providers";
 import "./globals.css";
 
@@ -93,6 +94,16 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${hankenGrotesk.variable} ${materialSymbols.variable} h-full antialiased`}
       >
         <body className="min-h-full flex flex-col">
+          {/* Clerk's JS SDK loads from clerk.creator-ai.in (a dedicated
+              DNS-subdomain instance — see the ClerkProvider comment below)
+              on every page, via an async <script> Clerk itself injects with
+              no resource hint ahead of it — confirmed by curling production
+              directly. Real production Speed Insights data showed /sign-in
+              as the worst FCP route (3.89s, "Poor") among routes with more
+              than one sample — see docs/ROADMAP.md NK-22.
+              ClerkPreconnect.tsx has the full story on why this needs
+              ReactDOM.preconnect(), not a plain <link>. */}
+          <ClerkPreconnect />
           <Providers>{children}</Providers>
           <SpeedInsights />
         </body>
