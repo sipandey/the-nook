@@ -4,6 +4,7 @@ import { useEffect, type ReactNode } from "react";
 import { useUser } from "@clerk/nextjs";
 import { useSessionStore } from "@/lib/store/session";
 import { useKeyMaterial } from "@/lib/hooks/useKeyMaterial";
+import { useAutoLock } from "@/lib/hooks/useAutoLock";
 import { PREVIEW_MODE, getPreviewDek } from "@/lib/preview";
 import { PassphraseSetup } from "./PassphraseSetup";
 import { PassphraseUnlock } from "./PassphraseUnlock";
@@ -19,6 +20,7 @@ export function UnlockGate({ children }: { children: ReactNode }) {
   const isUnlocked = useSessionStore((s) => s.isUnlocked);
   const unlock = useSessionStore((s) => s.unlock);
   const { data: keyMaterial, isLoading: keysLoading, error } = useKeyMaterial();
+  useAutoLock();
 
   useEffect(() => {
     if (PREVIEW_MODE && !isUnlocked) {
