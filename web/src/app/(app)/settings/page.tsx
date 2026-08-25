@@ -7,6 +7,7 @@ import { useClerk } from "@clerk/nextjs";
 import { MaterialIcon } from "@/components/MaterialIcon";
 import { TONE_OPTIONS } from "@/lib/tone";
 import { useTone } from "@/lib/hooks/useTone";
+import { useAiEnabled } from "@/lib/hooks/useAiEnabled";
 import { useKeyMaterial } from "@/lib/hooks/useKeyMaterial";
 import { useNotificationPrefs, useSaveNotificationPrefs } from "@/lib/hooks/useNotificationPrefs";
 import {
@@ -86,6 +87,7 @@ export default function SettingsPage() {
   const router = useRouter();
   const { signOut } = useClerk();
   const { tone, setTone } = useTone();
+  const { aiEnabled, setAiEnabled } = useAiEnabled();
   const { data: keyMaterial } = useKeyMaterial();
   const { data: prefs } = useNotificationPrefs();
   const savePrefs = useSaveNotificationPrefs();
@@ -267,6 +269,36 @@ export default function SettingsPage() {
               />
             </div>
           </div>
+        </section>
+
+        <section>
+          <h2 className="text-title-md font-editorial-display text-secondary mb-4 px-2">Privacy & Security</h2>
+          <div className="bg-surface-container-lowest rounded-xl overflow-hidden shadow-sm ring-1 ring-outline/10">
+            <div className="setting-row w-full flex items-center justify-between p-4 border-b border-outline/10">
+              <div className="flex items-center space-x-4">
+                <div className="w-10 h-10 rounded-full bg-surface-container flex items-center justify-center text-primary">
+                  <MaterialIcon name="smart_toy" />
+                </div>
+                <div className="text-left">
+                  <div className="text-body-md text-on-surface">Allow AI Features</div>
+                  <div className="text-sm text-secondary">
+                    {aiEnabled ? "On — see what this means below" : "Off — nothing you write leaves your device"}
+                  </div>
+                </div>
+              </div>
+              <Toggle on={aiEnabled} onClick={() => setAiEnabled(!aiEnabled)} />
+            </div>
+            <SettingRow icon="auto_stories" label="How we encrypt" href="/encryption" />
+            <SettingRow icon="shield" label="Privacy Policy" href="/privacy" />
+            <SettingRow icon="info" label="About" href="/about" />
+          </div>
+          <p className="mt-2 text-xs leading-relaxed text-on-surface-variant px-2">
+            Turning AI off disables playback stories, voice transcription, and
+            manifestation-signal detection — writing, browsing, search, streaks,
+            tags, and export all keep working. AI features send your decrypted
+            text to OpenAI for a single request each time; see &ldquo;How we
+            encrypt&rdquo; above for exactly what that means.
+          </p>
         </section>
 
         <section>
