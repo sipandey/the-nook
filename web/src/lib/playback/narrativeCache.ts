@@ -13,9 +13,12 @@
  * entry, not an abstract vector. Stored AES-GCM-encrypted with the DEK,
  * never in the clear, one IndexedDB database per Clerk user.
  *
- * Entries have no update path (only DELETE — see src/app/api/entries/[id]/
- * route.ts), so a cache key built from the sorted set of entry ids is
- * stable with no need for an updated_at/content-hash component.
+ * Entries gained a real update path (appending — see
+ * docs/plans/2026-08-24-append-to-todays-entry-design.md), so the cache
+ * key can no longer be built from entry IDs alone: a content change with
+ * the same ID set must produce a different key, or a narrative cached
+ * before an append would silently keep being served after the entry it
+ * was based on has grown. The key now hashes (id, updated_at) pairs.
  */
 
 const STORE_NAME = "narratives";
@@ -43,17 +46,23 @@ function openDb(userId: string): Promise<IDBDatabase> {
   });
 }
 
+export interface NarrativeCacheEntryRef {
+  id: string;
+  updatedAt: string;
+}
+
 /**
- * Cache key from (period, tone, sorted entry ids) — not the entry text
- * itself, which never needs to touch this module. Hashed to keep the
- * IndexedDB key short and independent of entry count.
+ * Cache key from (period, tone, sorted (id, updated_at) pairs) — not the
+ * entry text itself, which never needs to touch this module. Hashed to
+ * keep the IndexedDB key short and independent of entry count.
  */
 export async function buildNarrativeCacheKey(
   period: string,
   tone: string,
-  entryIds: string[],
+  entries: NarrativeCacheEntryRef[],
 ): Promise<string> {
-  const canonical = `${period}:${tone}:${[...entryIds].sort().join(",")}`;
+  const sorted = [...entries].sort((a, b) => a.id.localeCompare(b.id));
+  const canonical = `${period}:${tone}:${sorted.map((e) => `${e.id}@${e.updatedAt}`).join(",")}`;
   const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(canonical));
   return Array.from(new Uint8Array(digest))
     .map((b) => b.toString(16).padStart(2, "0"))
