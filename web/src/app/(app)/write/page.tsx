@@ -26,7 +26,7 @@ function WriteContent() {
   const params = useSearchParams();
   const dek = useSessionStore((s) => s.dek);
   const { aiEnabled } = useAiEnabled();
-  const { data: entries } = useEntries();
+  const { data: entries, isLoading: entriesLoading, isError: entriesError } = useEntries();
   const saveEntry = useSaveEntry();
   const appendToEntry = useAppendToEntry();
   const detectSignals = useSignalDetector();
@@ -42,6 +42,17 @@ function WriteContent() {
     return todaysEntry;
   }, [appendEntryId, entries, todaysEntry]);
   const isAppendMode = Boolean(appendTarget);
+
+  // Whether "does today's entry exist" is actually known yet — gates
+  // saving, not just reading. `entries ?? []` above treats "still
+  // loading"/"fetch failed" the same as "genuinely zero entries," which is
+  // exactly how a real production outage (entries API 500ing) let someone
+  // create several duplicate same-day entries: the composer silently fell
+  // back to "no entry today" instead of blocking the save until it could
+  // actually tell the difference. See .agent-room/decisions.md's incident
+  // entry. A brand-new user with zero entries still resolves this to
+  // `true` correctly — `entries` settles to `[]`, not an error.
+  const entriesStatusKnown = !entriesLoading && !entriesError;
 
   const appendDecrypted = useDecryptedEntries(appendTarget ? [appendTarget] : undefined, dek);
   const existingText = appendTarget ? appendDecrypted[appendTarget.id] : undefined;
@@ -369,6 +380,23 @@ function WriteContent() {
           </div>
         </div>
 
+        {entriesError && (
+          <div className="mt-stack-gap w-full rounded-xl bg-error-container/30 border border-error-container/50 p-6 flex flex-col md:flex-row gap-4 items-start md:items-center">
+            <div className="flex-shrink-0 bg-error-container/50 p-3 rounded-full flex items-center justify-center">
+              <MaterialIcon name="sync_problem" filled className="text-on-error-container" />
+            </div>
+            <div className="flex-grow flex flex-col gap-1">
+              <h3 className="font-editorial-display text-headline-md text-on-error-container">
+                Couldn&rsquo;t check today&rsquo;s entries
+              </h3>
+              <p className="text-body-md text-on-error-container/80">
+                Saving is paused so this doesn&rsquo;t create a duplicate entry for
+                today. Your text is safe here — check your connection and reload.
+              </p>
+            </div>
+          </div>
+        )}
+
         {(saveEntry.isError || appendToEntry.isError) && (
           <div className="mt-stack-gap w-full rounded-xl bg-error-container/30 border border-error-container/50 p-6 flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div className="flex-shrink-0 bg-error-container/50 p-3 rounded-full flex items-center justify-center">
@@ -400,11 +428,21 @@ function WriteContent() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!text.trim() || saveEntry.isPending || appendToEntry.isPending || !dek}
+            disabled={
+              !text.trim() ||
+              saveEntry.isPending ||
+              appendToEntry.isPending ||
+              !dek ||
+              !entriesStatusKnown
+            }
             className="w-full bg-primary hover:bg-surface-tint text-on-primary py-4 rounded-xl text-label-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_-2px_rgba(74,101,78,0.08)] disabled:opacity-40"
           >
             <MaterialIcon name="lock" filled size={18} />
-            {saveEntry.isPending || appendToEntry.isPending ? "Saving…" : "Save Entry"}
+            {saveEntry.isPending || appendToEntry.isPending
+              ? "Saving…"
+              : !entriesStatusKnown
+                ? "Checking today's entries…"
+                : "Save Entry"}
           </button>
           <div className="flex items-center justify-center gap-1.5 text-on-surface-variant/70">
             <MaterialIcon name="shield_lock" size={14} />
