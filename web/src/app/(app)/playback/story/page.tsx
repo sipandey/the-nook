@@ -147,7 +147,7 @@ function StoryContent() {
         text: decrypted[e.id] ?? "",
         mood: e.mood_score ?? 3,
       })),
-      entryIds: periodEntries.map((e) => e.id),
+      entries: periodEntries.map((e) => ({ id: e.id, updatedAt: e.updated_at })),
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [allDecrypted, periodEntries.length]);

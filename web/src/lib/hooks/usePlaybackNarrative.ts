@@ -8,7 +8,12 @@ import type { Tone } from "@/lib/tone";
 import { PREVIEW_MODE, getPreviewPlaybackNarrative } from "@/lib/preview";
 import { decryptText, encryptText } from "@/lib/crypto";
 import { useSessionStore } from "@/lib/store/session";
-import { buildNarrativeCacheKey, getCachedNarrative, putCachedNarrative } from "@/lib/playback/narrativeCache";
+import {
+  buildNarrativeCacheKey,
+  getCachedNarrative,
+  putCachedNarrative,
+  type NarrativeCacheEntryRef,
+} from "@/lib/playback/narrativeCache";
 
 export interface PlaybackRequest {
   period: Period;
@@ -16,8 +21,9 @@ export interface PlaybackRequest {
   entryPlaintexts: { date: string; text: string; mood: number }[];
   /** Client-side cache-key material only — never sent to the server (the
    *  route doesn't read it; see docs/ARCHITECTURE.md §10.2). Entries have
-   *  no update path, so the sorted id set alone is a stable cache key. */
-  entryIds: string[];
+   *  a real update path now (appending), so updated_at rides along with
+   *  each id — see src/lib/playback/narrativeCache.ts. */
+  entries: NarrativeCacheEntryRef[];
 }
 
 /**
@@ -41,7 +47,7 @@ export function usePlaybackNarrative() {
   return useMutation({
     mutationFn: async (input: PlaybackRequest): Promise<PlaybackNarrative> => {
       if (cacheUserId && dek) {
-        const key = await buildNarrativeCacheKey(input.period, input.tone, input.entryIds);
+        const key = await buildNarrativeCacheKey(input.period, input.tone, input.entries);
         const cached = await getCachedNarrative(cacheUserId, key);
         if (cached) {
           try {
@@ -68,7 +74,7 @@ export function usePlaybackNarrative() {
 
       if (cacheUserId && dek) {
         try {
-          const key = await buildNarrativeCacheKey(input.period, input.tone, input.entryIds);
+          const key = await buildNarrativeCacheKey(input.period, input.tone, input.entries);
           const { ciphertext, iv } = await encryptText(JSON.stringify(narrative), dek);
           await putCachedNarrative(cacheUserId, key, { ciphertext, iv });
         } catch {
