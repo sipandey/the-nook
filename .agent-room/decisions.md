@@ -1113,3 +1113,56 @@ require a real Clerk account — which this project's own preview-mode
 design, and Claude's operating rules, both rule out creating. Full sweep
 (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — Brand logo swap #2, and PWA icons finally brought in line
+
+**Decision:** Replaced every derived logo asset with the new glyph
+(sourced from Stitch `projects/13778589545983828422/screens/a97b8726b0ee464eae9a2d8d6b180a6a`
+— an enlarged, ultra-bold "reduce whitespace" pass on the same project's
+logo, requested directly by the user with a reference image): `logo-mark.png`
+(transparent, `--color-primary` #4a654e, for inline use next to text) and
+`logo-full.png` (512×512 rounded ivory card, `--color-primary-container`
+#8ba88e glyph, source for `icon.png`/`apple-icon.png`). Also regenerated
+the four PWA install icons (`public/icons/icon-{192,512}.png` and their
+`-maskable` variants) referenced by `manifest.json`, which the previous
+2026-08-24 logo pass never touched.
+**Why:** User asked to update the logo "everywhere." The PWA icons were a
+real, separate gap — `git log` on `public/icons/*` showed them dated
+2026-08-22, predating the Stitch brand logo entirely; they were still the
+original generic "sun over hills" placeholder (`public/icons/source-any.svg`),
+never brought in line when the favicon/inline mark were swapped last time.
+Left unfixed, "The Nook" would show the correct new glyph in the browser
+tab and on the sign-in page, but the old placeholder scene on an Android/iOS
+home-screen install — a real, user-visible inconsistency, not a
+hypothetical one.
+**How the raster was processed:** Stitch's `get_screen` still returns a
+flattened JPEG with the background baked in as solid ivory (#faf9f6), not
+real alpha — same limitation as the first logo pass. Recovered
+transparency in Python/Pillow via distance-based chroma-keying against
+the sampled ivory background (not literal equality, to keep clean
+anti-aliased edges), then cropped to content and **padded out to a square
+canvas** before saving — every call site (`PublicPageChrome`, sign-in,
+sign-up) sets equal `width`/`height` on the `<img>`, so a non-square
+source would have silently stretched. Caught by comparing the new
+`logo-mark.png`'s output size against the old file's dimensions before
+finalizing, not assumed.
+**Maskable-icon safe zone respected, not guessed:** the two `-maskable`
+manifest entries use much larger padding (glyph at ~55% of canvas) than
+the `any`-purpose icons (~78%), per the W3C maskable-icon convention that
+an OS may crop content outside the center safe zone when applying its own
+mask shape (circle, squircle, rounded square) — verified by checking
+`manifest.json`'s `purpose` field for each entry before choosing padding,
+not applied uniformly.
+**Scope decision, stated rather than silently expanded further:**
+`public/icons/source-any.svg` and `source-maskable.svg` were left
+untouched and are now stale — hand-authored placeholder SVGs, unreferenced
+by any code path (only the PNGs `manifest.json` points to matter at
+runtime), predating any icon-generation script. Recreating them as real vector
+paths from a flattened raster wasn't attempted; not worth fabricating.
+**Verified live, not just by reading the files:** `NEXT_PUBLIC_PREVIEW_MODE=1`
+dev server, `/about` (20px header mark) and `/sign-in` (36px hero mark)
+screenshotted at 4x zoom — clean edges, correct color, no chroma-key
+fringing/halo — and confirmed via `document.querySelectorAll('link[rel*="icon"]')`
+that the page's actual `<link>` tags resolve to the new `icon.png`/`apple-icon.png`
+files, not just that the files on disk look right. Full sweep
+(typecheck/lint/test) all exit 0 — no source code changed, image assets only.
+
