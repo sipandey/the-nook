@@ -54,8 +54,11 @@ const SENSITIVE_KEY_PATTERN = /passphrase|secret|recovery|text|content|plaintext
  */
 export function scrubEvent<T extends Pick<ErrorEvent, "request" | "extra">>(event: T): T {
   if (event.request) {
-    const { data: _data, cookies: _cookies, headers: _headers, ...restRequest } = event.request;
-    event = { ...event, request: restRequest };
+    const scrubbedRequest = { ...event.request };
+    delete scrubbedRequest.data;
+    delete scrubbedRequest.cookies;
+    delete scrubbedRequest.headers;
+    event = { ...event, request: scrubbedRequest };
   }
   if (event.extra) {
     const scrubbedExtra: Record<string, unknown> = {};
