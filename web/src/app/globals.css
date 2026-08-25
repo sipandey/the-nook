@@ -152,6 +152,27 @@ body {
   color: var(--color-text);
 }
 
+/* Replaces the class Google's Material Symbols CSS API used to inject
+   alongside the font itself — now self-hosted via next/font/local (see
+   layout.tsx), so this app owns the class definition too. Values match
+   Google's own upstream definition exactly (fetched and compared before
+   writing this), minus font-family, which points at the local variable
+   instead of the string "Material Symbols Outlined". */
+.material-symbols-outlined {
+  font-family: var(--font-material-symbols);
+  font-weight: normal;
+  font-style: normal;
+  font-size: 24px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+}
+
 /* Used by Home's empty-state illustration (src/app/(app)/page.tsx). */
 @keyframes breathe {
   0% { transform: scale(1); opacity: 0.9; }

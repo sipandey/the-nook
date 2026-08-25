@@ -1,8 +1,12 @@
+import { MATERIAL_SYMBOL_CODEPOINTS } from "@/lib/materialSymbolsCodepoints";
+
 /**
- * Thin wrapper over Google's Material Symbols icon font — used only in the
- * "editorial" screens (see layout.tsx's font-loading comment). Everywhere
- * else in the app still uses hand-drawn inline SVG icons; this isn't a
- * site-wide icon-system migration.
+ * Thin wrapper over a self-hosted, subsetted Material Symbols font — see
+ * src/lib/materialSymbolsCodepoints.ts for why this renders a looked-up
+ * PUA character instead of the icon's literal name (the usual way to use
+ * this font): the subsetted font only carries glyphs for the codepoints
+ * actually used, not the ligature-substitution tables that would be
+ * needed to turn literal text like "arrow_back" into a glyph.
  */
 export function MaterialIcon({
   name,
@@ -15,6 +19,13 @@ export function MaterialIcon({
   filled?: boolean;
   size?: number;
 }) {
+  const glyph = MATERIAL_SYMBOL_CODEPOINTS[name];
+  if (!glyph && process.env.NODE_ENV !== "production") {
+    console.warn(
+      `MaterialIcon: "${name}" has no entry in materialSymbolsCodepoints.ts — add it and re-subset the font.`,
+    );
+  }
+
   return (
     <span
       className={`material-symbols-outlined select-none ${className}`}
@@ -24,7 +35,7 @@ export function MaterialIcon({
       }}
       aria-hidden="true"
     >
-      {name}
+      {glyph ?? name}
     </span>
   );
 }

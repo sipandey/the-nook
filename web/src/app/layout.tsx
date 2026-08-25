@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono, Newsreader, Hanken_Grotesk } from "next/font/google";
+import localFont from "next/font/local";
 import { ClerkProvider } from "@clerk/nextjs";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Providers } from "./providers";
@@ -39,6 +40,24 @@ const hankenGrotesk = Hanken_Grotesk({
   subsets: ["latin"],
 });
 
+/**
+ * Material Symbols — self-hosted and subsetted, not loaded from Google's
+ * CSS API. That API served a synchronous, cross-origin, render-blocking
+ * `<link rel="stylesheet">` on every page (a real, measured cause of a
+ * production mobile FCP/LCP of ~7s — see docs/ROADMAP.md NK-20) — and it
+ * shipped the *entire* Material Symbols family, ~3.96MB, for the ~77
+ * icons this app actually uses. `next/font/local` fixes both at once:
+ * self-hosted means no extra origin to connect to, and the font file
+ * itself is a `--unicodes=`-subsetted 66KB (see
+ * src/lib/materialSymbolsCodepoints.ts for why codepoint subsetting, not
+ * the usual ligature-text approach, was necessary to actually shrink it).
+ */
+const materialSymbols = localFont({
+  src: "./fonts/material-symbols-outlined-subset.woff2",
+  variable: "--font-material-symbols",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
   title: "The Nook",
   description: "A quiet place to write, reflect, and watch yourself grow.",
@@ -71,22 +90,8 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <ClerkProvider signInUrl="/sign-in" signUpUrl="/sign-up">
       <html
         lang="en"
-        className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${hankenGrotesk.variable} h-full antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} ${newsreader.variable} ${hankenGrotesk.variable} ${materialSymbols.variable} h-full antialiased`}
       >
-        <head>
-          {/* Material Symbols — used only by the newly rebuilt "editorial"
-              screens; the rest of the app still uses inline SVG icons.
-              The no-page-custom-font rule below is a Pages Router-era
-              check (targets _document.js, which doesn't exist in App
-              Router) — this IS the documented App Router pattern for a
-              stylesheet next/font doesn't cover, in the root layout so
-              it's global, not single-page. */}
-          {/* eslint-disable-next-line @next/next/no-page-custom-font */}
-          <link
-            href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200&display=swap"
-            rel="stylesheet"
-          />
-        </head>
         <body className="min-h-full flex flex-col">
           <Providers>{children}</Providers>
           <SpeedInsights />

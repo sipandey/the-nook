@@ -1166,3 +1166,69 @@ that the page's actual `<link>` tags resolve to the new `icon.png`/`apple-icon.p
 files, not just that the files on disk look right. Full sweep
 (typecheck/lint/test) all exit 0 — no source code changed, image assets only.
 
+### 2026-08-25 — NK-20: self-host and codepoint-subset Material Symbols
+
+**Decision:** Replaced `layout.tsx`'s Google Fonts `<link rel="stylesheet">`
+for Material Symbols with a self-hosted `next/font/local` font, subsetted
+to exactly the ~77 icon codepoints this app uses (`src/app/fonts/material-symbols-outlined-subset.woff2`,
+3.96MB → 66KB). `MaterialIcon.tsx` now renders a looked-up PUA character
+(`src/lib/materialSymbolsCodepoints.ts`) instead of the icon's literal
+name as ligature text — the subsetted font has no GSUB ligature tables
+left, only direct codepoint-to-glyph mappings.
+**Why:** User shared real Vercel Speed Insights production data: mobile
+Real Experience Score 56, FCP and LCP both 7.03s (red), while TTFB was
+0.34s (green) — proof the ~6.7s gap was entirely client-side, not a slow
+server. `layout.tsx`'s Material Symbols `<link>` was the one resource on
+the critical rendering path that didn't go through `next/font` (the other
+four fonts — Geist, Geist Mono, Newsreader, Hanken Grotesk — already did):
+a synchronous fetch to a cold third-party origin (`fonts.googleapis.com`,
+then `fonts.gstatic.com` for the actual font file), on literally every
+page, for a font covering the *entire* Material Symbols icon set when the
+app uses about 77 of its several thousand icons.
+**Ligature-based subsetting was tried first and mostly failed — worth
+recording so it isn't retried blind.** `pyftsubset --text-file=<icon
+names> --layout-features='*'` (with `uharfbuzz` installed for real
+shaping-based closure) only shrank the font from 6597 to 5851 glyphs —
+barely 11%. Root cause, confirmed by inspecting the font directly: the
+GSUB ligature substitution Material Symbols uses (`rlig`/`rclt`, not the
+more common `liga`) is a large, shared, contextual-substitution graph —
+closing over "every glyph reachable from this input text" pulls in most
+of the font regardless of how few distinct icon names are actually
+referenced, because so many icon names share substring prefixes that
+fork deep into that shared graph. **Codepoint-based subsetting doesn't
+have this problem.** Material Symbols also assigns every icon a stable
+Private-Use-Area codepoint (Google's own `.codepoints` file, fetched
+directly from `google/material-design-icons` on GitHub and cross-checked
+against all 77 names used — zero misses); subsetting by exact
+`--unicodes=` is precise, no GSUB closure involved, and produced the
+actual 66KB result. The cost of this approach, stated rather than hidden:
+MaterialIcon no longer renders icon names as literal text, so a
+newly-introduced icon name needs its codepoint added to
+`materialSymbolsCodepoints.ts` and the font re-subsetted — documented
+directly in that file's header, with a dev-time `console.warn` in
+`MaterialIcon.tsx` if a name has no entry, so a missed one fails loudly
+in development rather than silently rendering nothing in production.
+**A real, separate, smaller lever was found and deliberately not pulled
+this round:** `next/next/no-img-element` flags 7 files still using raw
+`<img>` instead of `next/image` (pre-existing lint warnings, not
+introduced here). Left alone because the images involved are all small
+(10–34KB — the hero photos and the brand logo) and TTFB/CLS were already
+in the green on the real production data, so this wasn't a plausible
+contributor to a 6.7-second gap the way a multi-megabyte render-blocking
+font request clearly was. Recorded as a genuine, smaller follow-up in
+`docs/ROADMAP.md` NK-20 rather than silently bundled into this pass.
+**Verified concretely, not assumed:** confirmed zero `fonts.googleapis.com`
+references anywhere in the built HTML/JS output (`grep` across
+`.next/server` and `.next/static`); confirmed the new woff2 file appears
+in `.next/static/media` at the expected ~66KB; live-browser pass across
+Home, Journal, Settings, Manifestations, Playback (light and dark
+screens), and About confirmed every icon renders correctly, with zero
+`console.warn` "no entry" hits anywhere. One real detour during
+verification, unrelated to this change: `NEXT_PUBLIC_*` env vars are
+inlined at *build* time (a fact this project has hit and documented
+before — see the 2026-08-22 preview-mode entry) — an initial verification
+attempt reused a production build made without `NEXT_PUBLIC_PREVIEW_MODE=1`
+set, which surfaced as an unrelated-looking `/api/keys` 500 and a Clerk
+`auth()` error; resolved by rebuilding with the flag set, not by touching
+any auth code. Full sweep (typecheck/lint/test/build) all exit 0.
+
