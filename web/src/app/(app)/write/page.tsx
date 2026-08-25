@@ -10,11 +10,14 @@ import { MoodPicker, MOOD_OPTIONS } from "@/components/MoodPicker";
 import { TagInput } from "@/components/composer/TagInput";
 import { VoiceRecorder } from "@/components/composer/VoiceRecorder";
 import { useSaveEntry } from "@/lib/hooks/useSaveEntry";
+import { useAppendToEntry } from "@/lib/hooks/useAppendToEntry";
 import { useEntries } from "@/lib/hooks/useEntries";
+import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { useSessionStore } from "@/lib/store/session";
 import { computeStreak } from "@/lib/streak";
 import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
 import { useComposerDraft } from "@/lib/hooks/useComposerDraft";
+import { getTodaysEntry } from "@/lib/todaysEntry";
 
 type Stage = "voice" | "text" | "saved";
 
@@ -23,7 +26,23 @@ function WriteContent() {
   const dek = useSessionStore((s) => s.dek);
   const { data: entries } = useEntries();
   const saveEntry = useSaveEntry();
+  const appendToEntry = useAppendToEntry();
   const detectSignals = useSignalDetector();
+
+  // Append mode — see docs/plans/2026-08-24-append-to-todays-entry-design.md.
+  // ?entryId= (from the entry-detail page's "Add to this entry" button) is
+  // authoritative when present; otherwise fall back to whatever today's
+  // entry happens to be, matching Home's "Continue today's entry" CTA.
+  const appendEntryId = params.get("entryId");
+  const todaysEntry = useMemo(() => getTodaysEntry(entries ?? []), [entries]);
+  const appendTarget = useMemo(() => {
+    if (appendEntryId) return entries?.find((e) => e.id === appendEntryId);
+    return todaysEntry;
+  }, [appendEntryId, entries, todaysEntry]);
+  const isAppendMode = Boolean(appendTarget);
+
+  const appendDecrypted = useDecryptedEntries(appendTarget ? [appendTarget] : undefined, dek);
+  const existingText = appendTarget ? appendDecrypted[appendTarget.id] : undefined;
 
   const [stage, setStage] = useState<Stage>(params.get("mode") === "voice" ? "voice" : "text");
   const [title, setTitle] = useState("");
@@ -56,6 +75,30 @@ function WriteContent() {
     setShowRestoredBanner(true);
   });
 
+  // Pre-fill mood/tags from the entry being appended to — see the design
+  // doc's "mood & tags" decision. A restored draft (above) takes
+  // precedence: if the user already had an in-progress append underway
+  // when they left, that's what they should see back, not the entry's
+  // original values overwriting it.
+  //
+  // Adjusted during render, not in a useEffect: this is React's own
+  // documented pattern for "sync editable state from a prop, once, when
+  // it changes" (see react.dev, "You Might Not Need an Effect" →
+  // "Adjusting some state when a prop changes") — calling a state setter
+  // conditionally mid-render is allowed and causes an immediate re-render
+  // before anything commits, unlike calling setState from inside an
+  // effect body (react-hooks/set-state-in-effect flags exactly that shape
+  // — see NK-01's useComposerDraft.ts for the same rule caught earlier).
+  // A ref can't substitute here either — refs can't be written during
+  // render (react-hooks/refs) — so the "already applied" marker has to be
+  // a real state value too.
+  const [appliedAppendTargetId, setAppliedAppendTargetId] = useState<string | null>(null);
+  if (appendTarget && !showRestoredBanner && appliedAppendTargetId !== appendTarget.id) {
+    setAppliedAppendTargetId(appendTarget.id);
+    setMood(appendTarget.mood_score);
+    setTags(appendTarget.tags);
+  }
+
   // Debounced autosave — see src/lib/hooks/useComposerDraft.ts. Only while
   // actively composing text; the "voice" and "saved" stages don't touch
   // these fields, and clearDraft() already runs on a successful save.
@@ -87,6 +130,27 @@ function WriteContent() {
 
   async function handleSave() {
     if (!dek || !text.trim()) return;
+
+    if (isAppendMode && appendTarget && existingText !== undefined) {
+      const combined = `${existingText}\n\n${text.trim()}`;
+      const mergedTags = [...new Set([...appendTarget.tags, ...tags])];
+      await appendToEntry.mutateAsync({
+        entryId: appendTarget.id,
+        plaintext: combined,
+        moodScore: mood,
+        tags: mergedTags,
+        dek,
+      });
+      clearDraft();
+      setSavedId(appendTarget.id);
+      setStage("saved");
+      // Fire-and-forget, same as below — replaces this entry's prior
+      // signals (see the manifestation-signals route) rather than adding
+      // to them, since detection re-runs against the full updated text.
+      void detectSignals(appendTarget.id, combined, dek);
+      return;
+    }
+
     const plaintext = title.trim() ? `${title.trim()}\n\n${text.trim()}` : text.trim();
     const result = await saveEntry.mutateAsync({
       plaintext,
@@ -232,18 +296,26 @@ function WriteContent() {
           </div>
         )}
 
-        <input
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder="Title (optional)"
-          className="w-full bg-transparent border-0 border-b border-transparent focus:border-outline-variant focus:ring-0 px-0 py-2 font-editorial-display text-title-md text-on-surface placeholder:text-outline/50 transition-colors mb-4"
-        />
+        {isAppendMode && (
+          <div className="mb-4 rounded-lg bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant/70 whitespace-pre-wrap max-h-48 overflow-y-auto">
+            {existingText ?? "Loading today's entry…"}
+          </div>
+        )}
+
+        {!isAppendMode && (
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder="Title (optional)"
+            className="w-full bg-transparent border-0 border-b border-transparent focus:border-outline-variant focus:ring-0 px-0 py-2 font-editorial-display text-title-md text-on-surface placeholder:text-outline/50 transition-colors mb-4"
+          />
+        )}
 
         <div className="flex-1 flex flex-col min-h-[300px] relative">
           <textarea
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder="Start writing…"
+            placeholder={isAppendMode ? "Add another thought…" : "Start writing…"}
             autoFocus
             className="w-full h-full flex-1 bg-transparent border-none resize-none focus:ring-0 p-0 text-body-lg text-on-surface placeholder:text-on-surface-variant/40 leading-relaxed outline-none"
           />
@@ -273,7 +345,7 @@ function WriteContent() {
           </div>
         </div>
 
-        {saveEntry.isError && (
+        {(saveEntry.isError || appendToEntry.isError) && (
           <div className="mt-stack-gap w-full rounded-xl bg-error-container/30 border border-error-container/50 p-6 flex flex-col md:flex-row gap-4 items-start md:items-center">
             <div className="flex-shrink-0 bg-error-container/50 p-3 rounded-full flex items-center justify-center">
               <MaterialIcon name="sync_problem" filled className="text-on-error-container" />
@@ -304,11 +376,11 @@ function WriteContent() {
           <button
             type="button"
             onClick={handleSave}
-            disabled={!text.trim() || saveEntry.isPending || !dek}
+            disabled={!text.trim() || saveEntry.isPending || appendToEntry.isPending || !dek}
             className="w-full bg-primary hover:bg-surface-tint text-on-primary py-4 rounded-xl text-label-sm uppercase tracking-wider flex items-center justify-center gap-2 transition-all shadow-[0_4px_20px_-2px_rgba(74,101,78,0.08)] disabled:opacity-40"
           >
             <MaterialIcon name="lock" filled size={18} />
-            {saveEntry.isPending ? "Saving…" : "Save Entry"}
+            {saveEntry.isPending || appendToEntry.isPending ? "Saving…" : "Save Entry"}
           </button>
           <div className="flex items-center justify-center gap-1.5 text-on-surface-variant/70">
             <MaterialIcon name="shield_lock" size={14} />
