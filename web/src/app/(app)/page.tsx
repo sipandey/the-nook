@@ -111,7 +111,7 @@ export default function Home() {
     <div className="font-editorial-sans mx-auto flex min-h-screen w-full max-w-md flex-col bg-surface text-on-surface">
       <AppHeader />
 
-      <main className="flex flex-1 flex-col gap-stack-gap px-container-padding pt-2 pb-3">
+      <main className="flex flex-1 flex-col gap-stack-gap px-container-padding pt-2 pb-24">
         <div>
           <h1 className="font-editorial-display text-headline-md text-on-surface">
             {greeting}
