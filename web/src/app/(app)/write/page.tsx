@@ -332,7 +332,10 @@ function WriteContent() {
         )}
 
         {isAppendMode && (
-          <div className="mb-4 rounded-lg bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant/70 whitespace-pre-wrap max-h-48 overflow-y-auto">
+          <div
+            className="mb-4 rounded-lg bg-surface-container-low px-4 py-3 text-body-md text-on-surface-variant/70 whitespace-pre-wrap max-h-48 overflow-y-auto"
+            data-sentry-mask
+          >
             {existingText ?? "Loading today's entry…"}
           </div>
         )}
@@ -342,6 +345,7 @@ function WriteContent() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder="Title (optional)"
+            data-sentry-mask
             className="w-full bg-transparent border-0 border-b border-transparent focus:border-outline-variant focus:ring-0 px-0 py-2 font-editorial-display text-title-md text-on-surface placeholder:text-outline/50 transition-colors mb-4"
           />
         )}
@@ -352,6 +356,7 @@ function WriteContent() {
             onChange={(e) => setText(e.target.value)}
             placeholder={isAppendMode ? "Add another thought…" : "Start writing…"}
             autoFocus
+            data-sentry-mask
             className="w-full h-full flex-1 bg-transparent border-none resize-none focus:ring-0 p-0 text-body-lg text-on-surface placeholder:text-on-surface-variant/40 leading-relaxed outline-none"
           />
           <button

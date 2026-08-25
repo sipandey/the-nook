@@ -89,6 +89,7 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
               placeholder="ocean velvet prism silent quartz dawn echo lunar timber silver ember bloom"
               rows={3}
               autoFocus
+              data-sentry-mask
               className="w-full resize-none bg-transparent border-0 border-b border-outline-variant px-0 py-3 text-center text-body-md text-on-surface focus:ring-0 focus:border-primary placeholder:text-outline-variant transition-colors"
             />
           ) : (
@@ -99,6 +100,7 @@ export function PassphraseUnlock({ keyMaterial }: { keyMaterial: KeyMaterialRow 
               onKeyDown={(e) => e.key === "Enter" && secret && !submitting && submit()}
               placeholder="Passphrase"
               autoFocus
+              data-sentry-mask
               className="w-full bg-transparent border-0 border-b border-outline-variant px-0 pb-3 text-center text-body-lg text-on-surface focus:ring-0 focus:border-primary placeholder:text-outline-variant transition-colors"
             />
           )}

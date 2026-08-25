@@ -108,7 +108,10 @@ export function PassphraseSetup() {
               </p>
             </div>
 
-            <div className="relative bg-surface-container-highest rounded-xl p-6 md:p-8 border border-outline-variant/50">
+            <div
+              className="relative bg-surface-container-highest rounded-xl p-6 md:p-8 border border-outline-variant/50"
+              data-sentry-mask
+            >
               <div className="grid grid-cols-2 md:grid-cols-3 gap-x-4 gap-y-6 mb-12">
                 {recoveryWords.map((word, i) => (
                   <div key={i} className="flex items-baseline gap-3">
@@ -195,6 +198,7 @@ export function PassphraseSetup() {
               onChange={(e) => setPassphrase(e.target.value)}
               placeholder="Passphrase"
               autoFocus
+              data-sentry-mask
               className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-4 pr-8 text-body-lg text-on-surface focus:ring-0 focus:border-primary transition-colors"
             />
             <button
@@ -212,6 +216,7 @@ export function PassphraseSetup() {
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
             placeholder="Confirm Passphrase"
+            data-sentry-mask
             className="w-full bg-transparent border-0 border-b border-outline-variant px-0 py-4 text-body-lg text-on-surface focus:ring-0 focus:border-primary transition-colors"
           />
 
