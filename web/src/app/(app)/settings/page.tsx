@@ -8,6 +8,7 @@ import { MaterialIcon } from "@/components/MaterialIcon";
 import { TONE_OPTIONS } from "@/lib/tone";
 import { useTone } from "@/lib/hooks/useTone";
 import { useAiEnabled } from "@/lib/hooks/useAiEnabled";
+import { useSessionStore } from "@/lib/store/session";
 import { useKeyMaterial } from "@/lib/hooks/useKeyMaterial";
 import { useNotificationPrefs, useSaveNotificationPrefs } from "@/lib/hooks/useNotificationPrefs";
 import {
@@ -88,6 +89,7 @@ export default function SettingsPage() {
   const { signOut } = useClerk();
   const { tone, setTone } = useTone();
   const { aiEnabled, setAiEnabled } = useAiEnabled();
+  const lock = useSessionStore((s) => s.lock);
   const { data: keyMaterial } = useKeyMaterial();
   const { data: prefs } = useNotificationPrefs();
   const savePrefs = useSaveNotificationPrefs();
@@ -291,6 +293,7 @@ export default function SettingsPage() {
             <SettingRow icon="auto_stories" label="How we encrypt" href="/encryption" />
             <SettingRow icon="shield" label="Privacy Policy" href="/privacy" />
             <SettingRow icon="info" label="About" href="/about" />
+            <SettingRow icon="lock" label="Lock now" onClick={() => lock()} />
           </div>
           <p className="mt-2 text-xs leading-relaxed text-on-surface-variant px-2">
             Turning AI off disables playback stories, voice transcription, and
