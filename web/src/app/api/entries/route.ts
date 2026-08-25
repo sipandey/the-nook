@@ -17,7 +17,7 @@ export async function GET(request: Request) {
   const supabase = await getSupabaseServerClient();
   let query = supabase
     .from("entries")
-    .select("id, created_at, mood_score, tags, encrypted_content, iv")
+    .select("id, created_at, updated_at, mood_score, tags, encrypted_content, iv")
     .eq("user_id", userId)
     .order("created_at", { ascending: false });
 

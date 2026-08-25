@@ -6,6 +6,7 @@ import { PREVIEW_MODE, getPreviewEntries } from "@/lib/preview";
 export interface EntryMetadata {
   id: string;
   created_at: string;
+  updated_at: string;
   mood_score: number | null;
   tags: string[];
   /**

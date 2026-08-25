@@ -89,9 +89,11 @@ export function getPreviewEntries(): Promise<EntryMetadata[]> {
       const rows = await Promise.all(
         ENTRY_FIXTURES.map(async (f) => {
           const { ciphertext, iv } = await encryptText(f.text, dek);
+          const createdAt = new Date(now - f.daysAgo * 86400000).toISOString();
           return {
             id: f.id,
-            created_at: new Date(now - f.daysAgo * 86400000).toISOString(),
+            created_at: createdAt,
+            updated_at: createdAt,
             mood_score: f.mood,
             tags: f.tags,
             encrypted_content: ciphertext,
