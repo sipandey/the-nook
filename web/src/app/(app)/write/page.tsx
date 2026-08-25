@@ -18,12 +18,14 @@ import { computeStreak } from "@/lib/streak";
 import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
 import { useComposerDraft } from "@/lib/hooks/useComposerDraft";
 import { getTodaysEntry } from "@/lib/todaysEntry";
+import { useAiEnabled } from "@/lib/hooks/useAiEnabled";
 
 type Stage = "voice" | "text" | "saved";
 
 function WriteContent() {
   const params = useSearchParams();
   const dek = useSessionStore((s) => s.dek);
+  const { aiEnabled } = useAiEnabled();
   const { data: entries } = useEntries();
   const saveEntry = useSaveEntry();
   const appendToEntry = useAppendToEntry();
@@ -176,6 +178,28 @@ function WriteContent() {
   }
 
   if (stage === "voice") {
+    if (!aiEnabled) {
+      return (
+        <div className="font-editorial-sans bg-surface text-on-surface h-screen w-full flex flex-col items-center justify-center gap-4 px-6 text-center antialiased">
+          <MaterialIcon name="mic_off" size={32} className="text-outline" />
+          <p className="text-body-lg text-on-surface-variant max-w-xs">
+            Voice notes are transcribed by an AI service, and you&rsquo;ve
+            turned AI features off.
+          </p>
+          <Link href="/settings" className="text-label-sm text-primary underline underline-offset-2">
+            Manage in Settings
+          </Link>
+          <button
+            type="button"
+            onClick={() => setStage("text")}
+            className="text-label-sm text-outline underline underline-offset-2"
+          >
+            Back to writing
+          </button>
+        </div>
+      );
+    }
+
     return (
       <div className="font-editorial-sans bg-surface text-on-surface h-screen w-full overflow-hidden flex flex-col relative antialiased">
         <VoiceRecorder
