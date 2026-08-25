@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { ErrorEvent } from "@sentry/core";
 import { SENTRY_DATA_COLLECTION, scrubBreadcrumb, scrubEvent } from "./sentryOptions";
 
 describe("SENTRY_DATA_COLLECTION", () => {
@@ -69,7 +70,7 @@ describe("scrubEvent", () => {
   });
 
   it("leaves an event with no request or extra untouched", () => {
-    const event = { message: "TypeError: x is not a function" };
+    const event = { message: "TypeError: x is not a function" } as ErrorEvent;
     expect(scrubEvent(event)).toEqual(event);
   });
 });

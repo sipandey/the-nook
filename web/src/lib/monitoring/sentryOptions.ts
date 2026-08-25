@@ -17,11 +17,13 @@
  * one is in scope would otherwise send the actual plaintext. Every
  * category below is set explicitly; none left to its default.
  */
+import type { Breadcrumb, ErrorEvent } from "@sentry/core";
+
 export const SENTRY_DATA_COLLECTION = {
   userInfo: false,
   cookies: false,
   httpHeaders: { request: false, response: false },
-  httpBodies: [] as const,
+  httpBodies: [],
   urlQueryParams: false,
   databaseQueryData: false,
   stackFrameVariables: false,
@@ -31,30 +33,14 @@ export const SENTRY_DATA_COLLECTION = {
   // own code isn't sensitive; only the data flowing through it is.
 };
 
-interface MinimalBreadcrumb {
-  category?: string;
-  [key: string]: unknown;
-}
-
 /**
  * Drops console breadcrumbs entirely — defense against a future
  * console.log (in this codebase or a dependency's) ever touching
  * something sensitive, not a claim that today's code needs it.
  */
-export function scrubBreadcrumb<T extends MinimalBreadcrumb>(breadcrumb: T): T | null {
+export function scrubBreadcrumb(breadcrumb: Breadcrumb): Breadcrumb | null {
   if (breadcrumb.category === "console") return null;
   return breadcrumb;
-}
-
-interface MinimalEvent {
-  request?: {
-    data?: unknown;
-    cookies?: unknown;
-    headers?: unknown;
-    [key: string]: unknown;
-  };
-  extra?: Record<string, unknown>;
-  [key: string]: unknown;
 }
 
 const SENSITIVE_KEY_PATTERN = /passphrase|secret|recovery|text|content|plaintext/i;
@@ -66,7 +52,7 @@ const SENSITIVE_KEY_PATTERN = /passphrase|secret|recovery|text|content|plaintext
  * pattern — a blunt net against a future mistake, not a claim that
  * today's code passes anything sensitive through `extra` already.
  */
-export function scrubEvent<T extends MinimalEvent>(event: T): T {
+export function scrubEvent<T extends Pick<ErrorEvent, "request" | "extra">>(event: T): T {
   if (event.request) {
     const { data: _data, cookies: _cookies, headers: _headers, ...restRequest } = event.request;
     event = { ...event, request: restRequest };
