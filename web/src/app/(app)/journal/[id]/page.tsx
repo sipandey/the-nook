@@ -8,6 +8,7 @@ import { useEntries } from "@/lib/hooks/useEntries";
 import { useDecryptedEntries } from "@/lib/hooks/useDecryptedEntries";
 import { useDeleteEntry } from "@/lib/hooks/useDeleteEntry";
 import { useSessionStore } from "@/lib/store/session";
+import { getTodaysEntry } from "@/lib/todaysEntry";
 
 const MOOD_WORD: Record<number, string> = {
   1: "Struggling",
@@ -26,6 +27,13 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
   const [confirmingDelete, setConfirmingDelete] = useState(false);
 
   const entry = useMemo(() => entries?.find((e) => e.id === id), [entries, id]);
+
+  // "Add to this entry" only makes sense for today's own entry — see
+  // docs/plans/2026-08-24-append-to-todays-entry-design.md.
+  const isTodaysEntry = useMemo(
+    () => Boolean(entry && getTodaysEntry(entries ?? [])?.id === entry.id),
+    [entry, entries],
+  );
 
   // "One year ago today" — same month/day as this entry, an earlier year.
   const memoryEntry = useMemo(() => {
@@ -135,6 +143,18 @@ export default function EntryDetailPage({ params }: { params: Promise<{ id: stri
                   {MOOD_WORD[entry.mood_score] ?? entry.mood_score}
                 </span>
               )}
+            </div>
+          )}
+
+          {isTodaysEntry && (
+            <div className="mt-stack-gap pt-stack-gap border-t border-surface-variant">
+              <Link
+                href={`/write?entryId=${entry.id}`}
+                className="inline-flex items-center gap-2 text-label-sm text-primary hover:text-primary-fixed-dim transition-colors"
+              >
+                <MaterialIcon name="add" size={16} />
+                Add to this entry
+              </Link>
             </div>
           )}
         </article>
