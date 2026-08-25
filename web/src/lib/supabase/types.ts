@@ -24,6 +24,11 @@
  *
  * Regenerated again 2026-08-24 for 0007_daily_reminder_tracking.sql
  * (NK-10) — same `supabase db reset` process.
+ *
+ * Regenerated again 2026-08-24 for 0009_entries_updated_at.sql
+ * (append-to-today's-entry — see docs/plans/2026-08-24-append-to-todays-
+ * entry-design.md) — same `supabase db reset` process; a bare `supabase
+ * start` restored from a stale snapshot again, same as every prior time.
  */
 
 export type Json =
@@ -130,6 +135,7 @@ export type Database = {
           iv: string
           mood_score: number | null
           tags: string[]
+          updated_at: string
           user_id: string
         }
         Insert: {
@@ -139,6 +145,7 @@ export type Database = {
           iv: string
           mood_score?: number | null
           tags?: string[]
+          updated_at?: string
           user_id: string
         }
         Update: {
@@ -148,6 +155,7 @@ export type Database = {
           iv?: string
           mood_score?: number | null
           tags?: string[]
+          updated_at?: string
           user_id?: string
         }
         Relationships: []
