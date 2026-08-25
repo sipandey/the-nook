@@ -133,12 +133,25 @@ defined once, not duplicated and allowed to drift:
   (`passphrase`, `secret`, `recovery`, `text`, `content`, `plaintext`,
   case-insensitive) — a blunt but effective net against a future
   mistake, not a claim that today's code needs it.
-- **`data-sentry-mask`** attribute added to: the passphrase `<input>`
-  and recovery-phrase `<textarea>` in `PassphraseUnlock.tsx`/
+- **`data-sentry-mask`** attribute added to: the passphrase `<input>`,
+  recovery-phrase `<textarea>`/display in `PassphraseUnlock.tsx`/
   `PassphraseSetup.tsx`, and the composer's title `<input>`/text
-  `<textarea>` in `write/page.tsx`. Sentry's DOM-breadcrumb integration
-  respects this attribute — click/keypress breadcrumbs on these specific
-  elements never include their content, even as a description string.
+  `<textarea>`/append-mode preview in `write/page.tsx`. **Correction
+  found during implementation, not assumed from the design:** checked
+  directly against the installed package — `data-sentry-mask` is
+  implemented only in `@sentry/replay`'s source, not
+  `@sentry/browser-utils` (which is what actually builds DOM
+  breadcrumbs via `htmlTreeAsString`). Since this design doesn't install
+  Session Replay at all, the attribute has **no effect today** — an
+  earlier draft of this design claimed it did, which was wrong. Kept in
+  the code anyway, for two honest reasons rather than as active
+  protection: (1) `htmlTreeAsString` itself was also checked directly
+  and confirmed to build only a CSS-selector-style description (tag,
+  class, id) — it never reads `.textContent`/`.value` — so the risk this
+  attribute was meant to address was smaller than described to begin
+  with; (2) if Session Replay is ever added later without someone
+  re-auditing every input by hand, these elements are already correctly
+  marked, at zero cost today.
 
 ## Server-side routes — no new risk, but worth stating
 
