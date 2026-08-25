@@ -912,3 +912,90 @@ push service correctly rejecting a fake registration ID. Added a
 were otherwise completely invisible even in logs — cheap interim
 visibility ahead of NK-06 (production error monitoring, not built yet).
 
+### 2026-08-25 — NK-16: append to today's entry, not general editing
+
+**Decision:** Scoped NK-16 to **append to today's own entry only**, not
+general entry editing. New text is added to the end of today's existing
+entry, old text stays read-only, and appending to any entry from a prior
+day is rejected — both in the UI (no affordance shown) and server-side
+(`PATCH /api/entries/[id]` 403s if the entry's `created_at` isn't today,
+in the device's local calendar day, same comparison style as the existing
+"one year ago today" feature). This is entries' first update path ever
+(previously insert/delete only — a deliberate fact recorded in
+`ARCHITECTURE.md` §10.6.2 and `ROADMAP.md` NK-16, precisely because
+§10.6.2 already flagged what would break if it changed). Full design:
+`docs/plans/2026-08-24-append-to-todays-entry-design.md`; 13-task plan:
+`docs/plans/2026-08-24-append-to-todays-entry-plan.md`.
+
+**Why:** The user's actual complaint was narrow — multiple thoughts
+through the day land as separate entries, and they want them together.
+Full entry editing (rewrite any past entry, any time) was never the ask,
+and it's a much bigger surface — undo, edit history, arbitrary-content-
+change interaction with everything downstream that assumes entries only
+ever get inserted or deleted. Append-only, today-only matches the stated
+need with the smaller surface.
+
+**The playback narrative cache staleness warning in §10.6.2 came true, and
+is now fixed.** `buildNarrativeCacheKey` (`src/lib/playback/narrativeCache.ts`)
+keyed on bare sorted entry IDs, on the explicit assumption that an entry's
+ID set fully describes its content. That assumption broke the moment an
+entry could change content without a new ID. Fixed by adding an
+`entries.updated_at` column (`0009_entries_updated_at.sql`) and hashing
+`(id, updated_at)` pairs instead of bare IDs — an appended-to entry now
+gets a fresh cache key rather than silently serving a stale cached
+narrative. TDD'd against `narrativeCache.test.ts` (written failing first,
+confirmed it failed for the right reason, then implemented).
+
+**Manifestation-signal detection now deletes before it inserts, on
+purpose.** `/api/manifestation-signals` re-runs full-entry signal
+detection after every save, including an append — re-running against the
+grown entry (not just the newly appended text) was the user's own explicit
+choice, since a signal might only become detectable once the full day's
+context is present. Without a delete-first step, re-running on the same
+`entry_id` would accumulate duplicate signal rows on every append,
+silently inflating a signal's count each time — breaking the invariant
+that "the signal count means something." The delete is placed *after* the
+early-return for a zero-result detection pass, so a run that finds nothing
+doesn't wipe out real prior detections; it only clears the slate when
+there's something to replace it with.
+
+**Mood/tags on append: mood replaces, tags merge** — a mood score is a
+snapshot of one moment (there's only one `mood_score` column; the user's
+own choice from `AskUserQuestion`), so the day's most recent mood
+overwrites the prior value. Tags are additive across a day's thoughts
+(`[...new Set([...oldTags, ...newTags])]`), since a later addition
+shouldn't silently drop tags applied earlier that day.
+
+**A second, real infrastructure bug found during verification, same class
+as NK-10's:** the first attempt to verify the `PATCH` route against the
+local Supabase CLI stack using the service-role key hit a `permission
+denied for table entries` error. Root cause, confirmed by hand-constructing
+a real signed local JWT (HS256, the stack's known `JWT_SECRET`, `role:
+"authenticated"`) and running an actually RLS-scoped query rather than
+guessing: the local Postgres instance's `authenticated` role — the role
+every real per-request Clerk-JWT-forwarded query runs as — had never been
+granted baseline SQL privileges (`select/insert/update/delete`) on *any*
+table in the schema. RLS policies only govern which rows a role can see;
+they say nothing about whether the role can touch the table at all. Same
+gap class as NK-10's `service_role` fix (`0008_grant_service_role.sql`),
+one layer broader — this one would have silently blocked any future local
+verification of authenticated (non-service-role) writes, not just this
+feature's. Fixed with `0010_grant_authenticated.sql`, granting the same
+operations across every application table, not scoped narrowly to just
+`entries` — since the gap itself wasn't narrow.
+
+**Verified against a real local Supabase stack, not just unit tests:**
+`supabase db reset` (not `start`, which kept restoring a stale snapshot
+missing the new migrations — a recurring finding this session) to force a
+full migration replay; direct `psql` checks of `entries.updated_at` and
+the new grants rather than trusting CLI output; the hand-signed JWT
+technique above to exercise genuinely RLS-scoped `PATCH` requests; and a
+full live-browser pass (`NEXT_PUBLIC_PREVIEW_MODE=1`, `next build` +
+`next start`) confirming the append flow end-to-end — existing text
+read-only, new text appended with a blank-line separator, mood/tag
+pre-fill via React's documented "adjust state during render" pattern (no
+`useEffect`, since there's no async step here unlike NK-01's draft-restore
+case), Home's CTA switching to "Continue today's entry," and the
+entry-detail page's "Add to this entry" link appearing only on today's own
+entry. Full sweep (typecheck/lint/test/build) all exit 0.
+
