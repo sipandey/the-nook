@@ -1315,3 +1315,52 @@ branch itself is pre-existing and unchanged by this feature, already
 exercised by every real sign-in. Full sweep (typecheck/lint/test/build)
 all exit 0.
 
+### 2026-08-25 — NK-21: Home's LCP was a late DOM insertion, not a bundle problem
+
+**Decision:** Added `RecentThoughtSkeleton` to `src/app/(app)/page.tsx` —
+three placeholder blocks, sized to match a real "Recent Thoughts" entry
+exactly (same padding, same two-line text height via a fixed `h-6`
+matching `--text-body-md--line-height` rather than the newer `1lh` CSS
+unit, for reliable iOS Safari support), shown while `useEntries()` is
+loading instead of rendering nothing.
+**Why:** Follow-up to NK-20, against fresh production Speed Insights
+data pulled after that fix shipped: RES climbed 56→62, FCP dropped
+7.03s→3.89s, but LCP was still "Poor" at 5.49s P75. This time the
+dashboard's route-level breakdown was available (it hadn't been on the
+first pull) — `/` measured 5.7s, `/sign-in` 3.89s, `/about` and `/write`
+already "Great." That ruled out a shared-bundle-weight explanation
+immediately: `/` and `/write` are both statically prerendered and, once
+their generated `<script>` tags were directly diffed (19 vs 19 files,
+only one differing), carry almost identical JS payload — so a font-style
+fix wouldn't apply here the way it did for NK-20.
+**Root cause, found by reading the actual render logic, not guessing:**
+`recentEntries = (entries ?? []).slice(0, 3)` — while `entries` is still
+`undefined` (loading), this is an empty array, and the "Recent Thoughts"
+section renders with zero entries under its heading. Once
+`/api/entries` resolves, three brand-new text blocks enter the DOM at
+once. This matters specifically because of how LCP candidacy works: a
+text-only mutation inside an element that's already painted does not
+retrigger LCP, but a new element entering the render tree does — so
+those three late-arriving blocks were the most likely actual LCP
+element, not anything about the page's bundle or fonts. This effect is
+disproportionately visible on `/` specifically because it's the app's
+actual landing page (PWA launch, bookmark, cold app-open) and therefore
+far more likely than `/write` or `/journal` — both usually reached via
+warm in-app client-side navigation with React Query's cache already
+populated — to hit a genuinely empty cache and pay the full network
+round-trip cost before anything in that section can paint.
+**Verified live, working around the same tool-round-trip-latency lesson
+learned during the auto-lock work:** preview mode's fixture entries
+resolve via real (if fast) WebCrypto encryption, fast enough that a
+`javascript_exec` query for skeleton elements right after navigation
+found none — the fetch had already resolved by the time the tool's
+round trip completed. Rather than accept that as "can't verify,"
+temporarily added a 4-second artificial delay to the preview-mode branch
+of `useEntries.ts`'s `queryFn` (reverted immediately after, confirmed via
+`git diff` showing no residual change), which made the loading window
+long enough to actually observe: screenshotted the skeleton rendering
+correctly on first paint, then screenshotted again after the delay
+resolved, confirming the real content swapped in at the same position
+with no visible layout jump — the whole point of sizing the skeleton to
+match. Full sweep (typecheck/lint/test/build) all exit 0.
+

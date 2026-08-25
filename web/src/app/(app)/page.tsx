@@ -34,6 +34,37 @@ function formatDay(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { month: "short", day: "numeric" });
 }
 
+/**
+ * Sized to match a real "Recent Thoughts" entry block exactly (same
+ * padding, same two-line text height) — shown while entries are still
+ * loading, instead of rendering nothing. A cold visit to "/" (the app's
+ * actual landing page, so disproportionately likely to hit an empty
+ * React Query cache rather than a warm one from in-app navigation) was
+ * measured in production Real User Monitoring with an LCP around 5.7s,
+ * while structurally similar routes were under 2.5s. Root cause: with
+ * no placeholder, this section rendered with zero entries until the
+ * `/api/entries` round trip resolved, at which point three brand-new
+ * blocks of text entered the DOM at once — a late-arriving, large
+ * element is exactly what LCP measures against. A text-only update
+ * inside an element that's already painted doesn't retrigger LCP; a new
+ * element entering the DOM does. Docs: docs/ROADMAP.md NK-20.
+ */
+function RecentThoughtSkeleton() {
+  return (
+    <div className="py-3 px-4 -mx-4 rounded-lg border border-transparent" aria-hidden="true">
+      <div className="flex justify-between items-start mb-1">
+        <div className="h-4 w-16 rounded bg-surface-container-high animate-pulse" />
+        <div className="h-5 w-14 rounded-full bg-surface-container-high animate-pulse" />
+      </div>
+      <div className="flex flex-col gap-1.5 mt-1.5">
+        {/* h-6 = 24px, matching --text-body-md--line-height in globals.css */}
+        <div className="h-6 w-full rounded bg-surface-container-high animate-pulse" />
+        <div className="h-6 w-4/5 rounded bg-surface-container-high animate-pulse" />
+      </div>
+    </div>
+  );
+}
+
 function EmptyHome() {
   return (
     <div className="font-editorial-sans mx-auto flex min-h-screen w-full max-w-md flex-col bg-surface text-on-surface">
@@ -164,29 +195,31 @@ export default function Home() {
             </Link>
           </div>
           <div className="flex flex-col gap-3">
-            {recentEntries.map((entry) => {
-              const snippet = snippets[entry.id];
-              const moodLabel = entry.mood_score ? MOOD_OPTIONS[entry.mood_score - 1]?.label : null;
-              return (
-                <Link
-                  key={entry.id}
-                  href={`/journal/${entry.id}`}
-                  className="py-3 px-4 -mx-4 rounded-lg hover:bg-surface-container-lowest transition-colors border border-transparent hover:border-surface-variant"
-                >
-                  <div className="flex justify-between items-start mb-1">
-                    <span className="text-label-sm text-outline">{formatDay(entry.created_at)}</span>
-                    {moodLabel && (
-                      <span className="bg-surface-container-high text-on-surface-variant text-label-sm px-2 py-0.5 rounded-full">
-                        {moodLabel}
-                      </span>
-                    )}
-                  </div>
-                  <p className="text-body-md text-on-surface line-clamp-2">
-                    {snippet === undefined ? "…" : snippet || "(couldn't decrypt this entry)"}
-                  </p>
-                </Link>
-              );
-            })}
+            {entriesLoading
+              ? Array.from({ length: 3 }, (_, i) => <RecentThoughtSkeleton key={i} />)
+              : recentEntries.map((entry) => {
+                  const snippet = snippets[entry.id];
+                  const moodLabel = entry.mood_score ? MOOD_OPTIONS[entry.mood_score - 1]?.label : null;
+                  return (
+                    <Link
+                      key={entry.id}
+                      href={`/journal/${entry.id}`}
+                      className="py-3 px-4 -mx-4 rounded-lg hover:bg-surface-container-lowest transition-colors border border-transparent hover:border-surface-variant"
+                    >
+                      <div className="flex justify-between items-start mb-1">
+                        <span className="text-label-sm text-outline">{formatDay(entry.created_at)}</span>
+                        {moodLabel && (
+                          <span className="bg-surface-container-high text-on-surface-variant text-label-sm px-2 py-0.5 rounded-full">
+                            {moodLabel}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-body-md text-on-surface line-clamp-2">
+                        {snippet === undefined ? "…" : snippet || "(couldn't decrypt this entry)"}
+                      </p>
+                    </Link>
+                  );
+                })}
           </div>
         </div>
       </main>
