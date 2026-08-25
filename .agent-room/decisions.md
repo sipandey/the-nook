@@ -999,3 +999,117 @@ case), Home's CTA switching to "Continue today's entry," and the
 entry-detail page's "Add to this entry" link appearing only on today's own
 entry. Full sweep (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — AI privacy controls: an off switch, gated client-side
+
+**Decision:** Built a real, working "turn AI off" switch
+(`src/lib/hooks/useAiEnabled.ts`, boolean stored in Clerk `unsafeMetadata`
+— same mechanism as `tone`) rather than three independent per-feature
+toggles. Enforced at each of the three plaintext-to-OpenAI call sites
+(`useSignalDetector.ts`, the playback-narrative trigger in
+`playback/story/page.tsx`, the voice-mode render in `write/page.tsx`) by
+checking the switch and returning *before* the `fetch` — not in the
+`/api/ai/*` route handlers. Full design:
+`docs/plans/2026-08-25-ai-privacy-controls-design.md`; 11-task plan:
+`docs/plans/2026-08-25-ai-privacy-controls-plan.md`.
+
+**Why:** Users raised a real, specific concern: "the app uses AI, so how
+secure is my journal really — if AI knows my deepest secrets, someone else
+could too." Reading the actual code (not the docs) turned up three real
+gaps behind that fear: no off switch existed at all; manifestation-signal
+detection ran automatically after every save, consented to only via a
+toggle the user set on a *goal*, not on "send my entries to OpenAI"; and
+the privacy copy said AI content "is not retained *by us*" — true, and
+silent on OpenAI's own retention, which is a materially different claim.
+
+**Client-side enforcement, not server-side, and this is the load-bearing
+choice:** a check inside `/api/ai/playback` or `/api/ai/transcribe` can't
+undo an exposure that's already happened — plaintext reaches the route
+handler over the wire before any server code runs, so by the time a
+server-side gate could reject the request, the thing the switch exists to
+prevent has already occurred. Only a check *before* the `fetch` call
+actually stops it. This also means the guarantee is inspectable: a
+skeptical user (or their browser's network tab) can verify the claim
+directly, rather than trusting a server-side promise.
+
+**One master switch, not three:** the value of this feature is the
+sentence a user can say afterward — "nothing I write leaves my device."
+Three independent toggles (playback / voice / signal-detection) would mean
+no clean sentence is ever available, since a user could always have
+partially opted in without realizing it. The `auto_detect` toggle on
+individual manifestations still exists underneath the master switch (for
+turning detection off per-goal even when AI is otherwise on), but its
+label was rewritten to say plainly what it sends, rather than the vaguer
+"automatically link journal entries" it had before.
+
+**On by default for existing users, not silently flipped off:** turning
+AI off after the fact would silently break playback and voice
+transcription for everyone already using them. This ships as a new choice
+being offered — disclosed prominently in the new Settings → Privacy &
+Security section and in the updated privacy copy — not a removal applied
+without asking.
+
+**OpenAI's retention policy was verified live against their current docs
+in this session, not recalled from training data** — a real, checkable
+claim now heading into user-facing privacy copy deserved the same
+"check the source" standard this session already applies to platform
+constraints (e.g. NK-10's Vercel Cron research). Fetched
+`developers.openai.com/api/docs/guides/your-data` directly: API traffic
+isn't used to train OpenAI's models by default (true since March 2023,
+already stated correctly in the app), but *is* retained by OpenAI for up
+to 30 days for abuse monitoring, unless longer retention is legally
+required — a fact that appeared nowhere in the app before this. Added to
+both `content/privacy.md` and `content/encryption.md`. Zero Data
+Retention (an OpenAI offering that would close this gap structurally,
+covering all three plaintext-sending endpoints) was identified as a real
+follow-up but requires OpenAI sales approval — an account-level step
+outside this codebase, explicitly out of scope for this round.
+
+**A genuine overclaim was found and fixed while writing the disclosure,
+not just the underclaim that motivated it:** `content/privacy.md` listed
+"daily prompts" among the AI features that send entry text to OpenAI.
+They don't — `/api/ai/prompt` calls `generateDailyPrompt(tone, [])`, an
+empty summaries list, cached and shared across every user on the same
+tone. Fixing this actually shrank the disclosed surface from four AI
+features to three, the opposite direction from every other change in this
+entry.
+
+**A design-doc correction made during planning, not silently absorbed:**
+the approved design also named a "voice-mode badge" in `write/page.tsx`
+as a third badge-fix target. It doesn't exist — `VoiceRecorder.tsx` shows
+no "End-to-End Encrypted" claim at all during recording, and both badges
+that do exist in `write/page.tsx` are generic to every save (accurate
+either way, since the final entry really is encrypted regardless of how
+the text originated) and were correctly left untouched. The design doc
+was corrected in place rather than quietly implementing something
+different from what it said — only two badge call sites actually changed
+(`playback/story/page.tsx`, both occurrences), where "End-to-End
+Encrypted" sat directly under content that only exists because plaintext
+left the device.
+
+**Also fixed in passing, found while designing this:** `PublicPageChrome`
+hard-coded a "Sign in" button on the app's own privacy/encryption/about
+pages — even for a signed-in user who reached one of these pages via the
+new Settings links, a dead end with no path back to the app. Made the
+header signed-in-aware (`useUser().isSignedIn` → "Back to journal" vs.
+"Sign in").
+
+**Live verification had a real, structural limit, stated honestly rather
+than faked:** `PREVIEW_MODE` deliberately doesn't fake a Clerk session
+(see this file's 2026-08-22 entry — "write mutations... correctly fail
+with no session in preview mode"), so `setAiEnabled`'s `user.update()`
+call can never succeed in this sandbox's preview mode, and `aiEnabled` can
+never actually be flipped to `false` live here — the same limitation this
+app already accepts for `tone`. What *was* verified live
+(`NEXT_PUBLIC_PREVIEW_MODE=1`, `next build` + `next start`): the Settings
+section renders with the correct default and copy; the playback-story
+badge fix renders the new copy on a real generated narrative; the
+manifestation auto-detect label; the corrected privacy/encryption/about
+copy; and `PublicPageHeader` correctly rendering its "Sign in" fallback
+branch (the honest expected result with no real session) without
+crashing. The three gate placements themselves (`if (!aiEnabled) return;`
+before each `fetch`) were verified by direct code reading rather than a
+live click-through, since exercising the `false` branch live would
+require a real Clerk account — which this project's own preview-mode
+design, and Claude's operating rules, both rule out creating. Full sweep
+(typecheck/lint/test/build) all exit 0.
+
