@@ -1409,3 +1409,5 @@ sample — a single data point, too little to read into on its own, and
 this fix (same root layout, same preconnect) already benefits it
 identically to `/sign-in` regardless.
 
+<!-- no-log: routine update to ROADMAP.md's launch-ready checklist annotation, reflecting real-device iOS install evidence from this session's earlier conversation — no decision or anti-pattern worth recording -->
+

@@ -216,8 +216,12 @@ that contradicts its own marketing copy.
 - [x] **CI blocks bad merges.** Typecheck, lint, and build all run on every PR.
 - [ ] **Failures are visible.** Production errors reach you without a user reporting them.
 - [ ] **It installs.** Home-screen install works on iOS and Android — *the shell
-      opening offline is now confirmed (NK-07/NK-11); actual Add to Home Screen
-      on a real device is still untested.*
+      opening offline is confirmed (NK-07/NK-11), and iOS Add to Home Screen is
+      now confirmed on a real device (the user installed it and used it in
+      standalone mode — surfaced the auto-lock-on-backgrounding gap this
+      session, itself real-device evidence the install actually works, not
+      just that it's technically possible). Android Add to Home Screen
+      remains untested.*
 - [ ] **Reminders arrive.** An opted-in user receives a real scheduled push on a real device
       — *the send mechanism itself is confirmed working (NK-10, verified against a real
       network round-trip to Google's FCM endpoint); what's left is the human step from
