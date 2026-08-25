@@ -12,11 +12,15 @@ The roadmap entry itself already states the core constraint: **"Must
 exclude entry content from payloads."** This is the entire design
 problem. The Nook's whole product claim — the thing `content/encryption.md`
 stakes its credibility on — is that plaintext never leaves the device.
-Sentry's *defaults* are broadly safe (`sendDefaultPii` defaults to
-`false`; Session Replay is opt-in, not automatic), verified directly
-against Sentry's current docs rather than assumed, but "the defaults are
-fine" isn't the same bar as "we made this a checkable, deliberate claim."
-This design is about the latter.
+Sentry's defaults are a mix: Session Replay is genuinely opt-in (verified
+against current docs), but local variable capture in crash stack frames
+(`dataCollection.stackFrameVariables`) defaults to **on** and would
+capture actual plaintext on the right kind of crash — verified directly
+against the installed package's type definitions after doc summaries
+missed it (see "Privacy configuration" below). Either way, "the defaults
+happen to be fine" was never the target bar here — this design is about
+an explicit, checkable configuration, not a reliance on defaults staying
+favorable across SDK versions.
 
 ## Vendor and access
 
@@ -90,23 +94,45 @@ functions, imported by both `instrumentation-client.ts` and
 `sentry.server.config.ts`/`sentry.edge.config.ts` so the policy is
 defined once, not duplicated and allowed to drift:
 
-- **`sendDefaultPii: false`** — set explicitly in every config file,
-  even though it's already the SDK default. This repo's convention
-  (see `content/encryption.md`) is to state a security posture as a
-  checkable fact, not lean on an implicit default someone could change
-  later without noticing what it was protecting.
+- **`dataCollection`, not just `sendDefaultPii`.** Checked against the
+  actually-installed package's type definitions directly (`@sentry/core`
+  10.71.0), not documentation summaries, after those summaries turned
+  out to be incomplete: `sendDefaultPii` is deprecated in this version
+  in favor of a newer, more granular `dataCollection` option — and
+  critically, several `dataCollection` categories default to **on**
+  regardless of `sendDefaultPii`'s value, most importantly
+  `stackFrameVariables` (default `true`: local variable *values* in a
+  crashing function's stack frame, sent as-is). That's a direct leak
+  vector for this app specifically — e.g. `write/page.tsx`'s
+  `handleSave()` holds decrypted journal text in a local variable
+  (`combined`); a crash while it's in scope would otherwise send its
+  actual value. Every category set explicitly, not left to the default:
+  `stackFrameVariables: false` (the critical one), `cookies: false`,
+  `httpHeaders: { request: false, response: false }`,
+  `httpBodies: []`, `urlQueryParams: false`, `userInfo: false`,
+  `databaseQueryData: false`, `genAI: { inputs: false, outputs: false }`
+  (this app's own OpenAI calls go through its own wrapper, not a Sentry
+  AI integration, but set explicitly regardless — belt and suspenders
+  costs nothing here). `frameContextLines` (surrounding *source code*
+  lines shown around a crash point) is left at its default — that's
+  this app's own code, not user data, so it's useful for debugging with
+  no privacy cost. `sendDefaultPii: false` is still set too, for the
+  narrower legacy behavior it still controls (e.g. automatic IP
+  collection) and because leaving a deprecated-but-still-honored option
+  unset is one more thing to have drifted quietly.
 - **`beforeBreadcrumb`** — drops any breadcrumb with `category ===
   "console"` outright (can't guarantee no future `console.log` anywhere
   in this codebase, or a dependency's, ever touches something
   sensitive — this is defense against code that doesn't exist yet, not
   just what's here today).
-- **`beforeSend`** — strips `request.data`, `request.cookies`,
-  `request.headers` from the outgoing event (a second layer beyond
-  `sendDefaultPii: false`, not a replacement for it), and recursively
-  scrubs any object value under `extra`/`contexts` whose *key* matches a
-  known-sensitive pattern (`passphrase`, `secret`, `recovery`, `text`,
-  `content`, `plaintext`, case-insensitive) — a blunt but effective net
-  against a future mistake, not a claim that today's code needs it.
+- **`beforeSend`** — as a second layer beyond `dataCollection` (not a
+  replacement for it — belt and suspenders, not either/or), strips
+  `request.data`/`cookies`/`headers` from the outgoing event if somehow
+  still present, and recursively scrubs any object value under
+  `extra`/`contexts` whose *key* matches a known-sensitive pattern
+  (`passphrase`, `secret`, `recovery`, `text`, `content`, `plaintext`,
+  case-insensitive) — a blunt but effective net against a future
+  mistake, not a claim that today's code needs it.
 - **`data-sentry-mask`** attribute added to: the passphrase `<input>`
   and recovery-phrase `<textarea>` in `PassphraseUnlock.tsx`/
   `PassphraseSetup.tsx`, and the composer's title `<input>`/text
