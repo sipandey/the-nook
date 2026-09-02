@@ -1516,3 +1516,29 @@ required for error capture itself to function.
 
 Full sweep (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — NK-12: entry length cap enforced at the AI routes, not the entries API
+
+**Decision:** 10,000 characters, hard `maxLength` stop, matching
+`ManifestationForm`'s existing capped-input UX rather than inventing a
+new pattern. The composer's `maxLength` is dynamic in append mode
+(`10,000 − existing text length`) so appending can't creep a single
+entry past the cap one thought at a time. Server-side, the cap is
+enforced by truncation (not rejection) at `/api/ai/playback` and
+`/api/ai/detect-signals` specifically — not `/api/entries`.
+**Why:** The entries storage routes never see plaintext at all — this
+app encrypts client-side, so the server only ever holds ciphertext for
+saved entries — meaning a character-count cap literally cannot be
+enforced meaningfully there. The two AI routes are different: they
+receive real plaintext, transiently, specifically to make one OpenAI
+call (§6.4/§6.5). That's exactly where the roadmap's actual concern —
+"cost per call is unbounded" — materializes, so that's where the
+server-side safety net belongs. Truncation rather than a 400 rejection:
+the client-side cap already prevents this path from being hit in normal
+use, so this exists purely to bound cost against a bypassed client or a
+pre-cap entry, not to punish or interrupt a real save.
+**Verified live:** in append mode, confirmed the textarea's actual
+`maxLength` DOM property equals `10,000 − existingText.length` for a
+real fixture entry (not just read from the diff); confirmed the "X /
+10,000" counter appears only past the 80% combined-length threshold and
+is absent below it.
+

@@ -19,6 +19,7 @@ import { useSignalDetector } from "@/lib/hooks/useSignalDetector";
 import { useComposerDraft } from "@/lib/hooks/useComposerDraft";
 import { getTodaysEntry } from "@/lib/todaysEntry";
 import { useAiEnabled } from "@/lib/hooks/useAiEnabled";
+import { ENTRY_MAX_LENGTH } from "@/lib/entryLimits";
 
 type Stage = "voice" | "text" | "saved";
 
@@ -64,6 +65,15 @@ function WriteContent() {
     const fromQuery = Number(params.get("mood"));
     return fromQuery >= 1 && fromQuery <= 5 ? fromQuery : null;
   });
+
+  // NK-12 — bounds the *combined* length (existing text + what's being
+  // typed now), not just the new text in isolation, since appending is
+  // exactly how an entry could otherwise creep past the limit one
+  // thought at a time. Clamped at 0: an entry saved before this cap
+  // existed could already be at or over it, which shouldn't produce a
+  // negative maxLength.
+  const textMaxLength = Math.max(0, ENTRY_MAX_LENGTH - (existingText?.length ?? 0));
+  const combinedLength = (existingText?.length ?? 0) + text.length;
   const [tags, setTags] = useState<string[]>([]);
   const [savedId, setSavedId] = useState<string | null>(null);
 
@@ -356,6 +366,7 @@ function WriteContent() {
             onChange={(e) => setText(e.target.value)}
             placeholder={isAppendMode ? "Add another thought…" : "Start writing…"}
             autoFocus
+            maxLength={textMaxLength}
             data-sentry-mask
             className="w-full h-full flex-1 bg-transparent border-none resize-none focus:ring-0 p-0 text-body-lg text-on-surface placeholder:text-on-surface-variant/40 leading-relaxed outline-none"
           />
@@ -368,6 +379,12 @@ function WriteContent() {
             <MaterialIcon name="mic" />
           </button>
         </div>
+
+        {combinedLength > ENTRY_MAX_LENGTH * 0.8 && (
+          <div className="text-right text-label-sm text-outline mt-1">
+            {combinedLength} / {ENTRY_MAX_LENGTH}
+          </div>
+        )}
 
         <div className="mt-12 flex flex-col gap-inline-gap bg-surface-container-lowest/50 backdrop-blur-sm p-4 rounded-xl border border-outline-variant/30 shadow-[0_4px_20px_-2px_rgba(74,101,78,0.08)]">
           <div className="flex items-center gap-4 py-2">

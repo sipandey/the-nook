@@ -15,19 +15,23 @@ import {
   type ManifestationForDetection,
 } from "@/lib/ai/openai";
 import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
+import { truncateToEntryLimit } from "@/lib/entryLimits";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
   if (!userId) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
-  const { entryText, manifestations } = (await request.json()) as {
+  const { entryText: rawEntryText, manifestations } = (await request.json()) as {
     entryText: string;
     manifestations: ManifestationForDetection[];
   };
 
-  if (!entryText || !manifestations?.length) {
+  if (!rawEntryText || !manifestations?.length) {
     return NextResponse.json({ signals: [] });
   }
+
+  // NK-12 safety net — see the matching comment in the playback route.
+  const entryText = truncateToEntryLimit(rawEntryText);
 
   if (!(await checkAiRateLimit(userId, "detect-signals"))) {
     return NextResponse.json({ signals: [], error: "rate_limited" }, { status: 429 });
