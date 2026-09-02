@@ -15,7 +15,8 @@
  */
 
 import "server-only";
-import { getSupabaseServerClient } from "@/lib/supabase/server";
+import { getSupabaseServerClient, getSupabaseServiceRoleClient } from "@/lib/supabase/server";
+import { computeCallCostUsd } from "./cost";
 
 export type AiRoute = "prompt" | "playback" | "detect-signals" | "transcribe";
 
@@ -23,6 +24,9 @@ export interface AiUsage {
   promptTokens?: number;
   completionTokens?: number;
   totalTokens?: number;
+  /** whisper-1 only — bills by audio duration, not tokens. See NK-13's
+   *  migration 0011_ai_usage_log_duration.sql. */
+  durationSeconds?: number;
 }
 
 /**
@@ -64,6 +68,52 @@ export async function checkAiRateLimit(userId: string, route: AiRoute): Promise<
 }
 
 /**
+ * NK-13 — bounds total OpenAI spend across *every* user, not just one
+ * user's own hourly rate (that's what checkAiRateLimit already does).
+ * Requires the service-role client, since this is a genuine cross-user
+ * read — see the "sanctioned exceptions" comment on
+ * getSupabaseServiceRoleClient in src/lib/supabase/server.ts for why
+ * that's safe to do from a route reachable by a browser/user request in
+ * this one specific, narrow case.
+ *
+ * $1/day by default, overridable via AI_DAILY_SPEND_CEILING_USD — this
+ * is a personal-scale app today, but the exact dollar comfort level is
+ * a product call, not something to hardcode past a config point. UTC
+ * calendar day, matching the daily-prompt cache's existing day-boundary
+ * convention (docs/ARCHITECTURE.md §10.6.1) rather than a rolling
+ * window, for the same reason: simple and explicit beats precise.
+ *
+ * Fails open, same as checkAiRateLimit: a DB hiccup degrades to
+ * "allow the call," never to blocking a legitimate request.
+ */
+export async function checkAggregateSpendCeiling(): Promise<boolean> {
+  const ceilingUsd = Number(process.env.AI_DAILY_SPEND_CEILING_USD ?? "1");
+  const startOfUtcDay = new Date();
+  startOfUtcDay.setUTCHours(0, 0, 0, 0);
+
+  const supabase = getSupabaseServiceRoleClient();
+  const { data, error } = await supabase
+    .from("ai_usage_log")
+    .select("model, prompt_tokens, completion_tokens, duration_seconds")
+    .gte("created_at", startOfUtcDay.toISOString());
+
+  if (error) return true;
+
+  const totalSpentUsd = (data ?? []).reduce(
+    (sum, row) =>
+      sum +
+      computeCallCostUsd(row.model, {
+        promptTokens: row.prompt_tokens ?? undefined,
+        completionTokens: row.completion_tokens ?? undefined,
+        durationSeconds: row.duration_seconds ?? undefined,
+      }),
+    0,
+  );
+
+  return totalSpentUsd < ceilingUsd;
+}
+
+/**
  * Records one completed call. Best-effort — awaited so it completes before
  * the function returns (Vercel Functions don't guarantee post-response
  * work), but its result is never surfaced to the caller; a logging failure
@@ -84,6 +134,7 @@ export async function recordAiUsage(
       prompt_tokens: usage?.promptTokens ?? null,
       completion_tokens: usage?.completionTokens ?? null,
       total_tokens: usage?.totalTokens ?? null,
+      duration_seconds: usage?.durationSeconds ?? null,
     });
   } catch {
     // Metadata logging is a bonus, not a requirement — see module comment.

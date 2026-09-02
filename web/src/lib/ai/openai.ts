@@ -214,18 +214,20 @@ export async function transcribeAudio(
   });
 
   // whisper-1 is billed by audio duration, not tokens — its usage object
-  // (when present) carries `seconds`, not prompt/completion counts. Only
-  // the token-billed variant (other transcription models) maps onto
-  // AiUsage; duration-only responses still get logged by the caller for
-  // call-count-based rate limiting, just without a token figure.
-  const usage =
-    response.usage?.type === "tokens"
-      ? {
-          promptTokens: response.usage.input_tokens,
-          completionTokens: response.usage.output_tokens,
-          totalTokens: response.usage.total_tokens,
-        }
-      : undefined;
+  // (when present) carries `seconds`, not prompt/completion counts. NK-13
+  // needs that duration to price the call for the aggregate spend
+  // ceiling (see computeCallCostUsd in src/lib/ai/cost.ts), so the
+  // duration variant now maps to AiUsage too, not just the token one.
+  let usage: AiUsage | undefined;
+  if (response.usage?.type === "tokens") {
+    usage = {
+      promptTokens: response.usage.input_tokens,
+      completionTokens: response.usage.output_tokens,
+      totalTokens: response.usage.total_tokens,
+    };
+  } else if (response.usage?.type === "duration") {
+    usage = { durationSeconds: response.usage.seconds };
+  }
 
   return { text: response.text, usage };
 }
