@@ -1658,3 +1658,5 @@ available in this session to approximate one — this spike closes the
 original gap with real numbers, not the device-tier part. Recorded as
 `NK-14: Partially done`, not `Done`, in `docs/ROADMAP.md`.
 
+<!-- no-log: routine doc fix, updating ROADMAP.md §4.2 to reflect that NK-16 already decided the entries-immutability question weeks ago -- no new decision or anti-pattern here, just correcting a stale doc -->
+

@@ -154,16 +154,21 @@ is a guess without it.
 and talk to you directly) rather than instrumentation. Preserves the privacy claim
 exactly as written, and qualitative depth beats funnel metrics at this stage.
 
-### 4.2 Are entries immutable on purpose?
+### 4.2 Are entries immutable on purpose? — decided
 
 Today they cannot be edited — not a stated design stance, just the shape of what was
-built. Both readings are defensible: an uneditable journal is philosophically
+built. Both readings were defensible: an uneditable journal is philosophically
 coherent (you don't get to revise your past), and an editable one fixes typos and
 half-finished thoughts.
 
-**Recommendation:** decide, then write it down in `ARCHITECTURE.md` §8 either way.
-The cost of leaving it implicit is that §10.6.2's cache-staleness trap gets sprung by
-whoever eventually adds editing without reading that far.
+**Decided:** neither, exactly — append-only. NK-16 resolved this: multiple thoughts
+in a day become one entry via a same-day append, not full editing of past entries or
+past text. Entries gained their first update path (`PATCH /api/entries/[id]`,
+today-only, server-enforced), and the §10.6.2 cache-staleness trap this section itself
+flagged did get sprung by it, exactly as predicted — and was fixed in the same change
+(`buildNarrativeCacheKey` now hashes `(id, updated_at)` pairs). Written down in
+`ARCHITECTURE.md` §8 and §10.6.2, and in `.agent-room/decisions.md`'s 2026-08-25 NK-16
+entry, per this section's own recommendation.
 
 ### 4.3 Notification richness vs. lock-screen exposure — decided
 
