@@ -29,6 +29,10 @@
  * (append-to-today's-entry — see docs/plans/2026-08-24-append-to-todays-
  * entry-design.md) — same `supabase db reset` process; a bare `supabase
  * start` restored from a stale snapshot again, same as every prior time.
+ *
+ * Regenerated again 2026-08-25 for 0011_ai_usage_log_duration.sql
+ * (NK-13, aggregate spend ceiling) — same `supabase db reset` process;
+ * same stale-snapshot-on-bare-`start` pattern, confirmed yet again.
  */
 
 export type Json =
@@ -71,6 +75,7 @@ export type Database = {
         Row: {
           completion_tokens: number | null
           created_at: string
+          duration_seconds: number | null
           id: string
           model: string
           prompt_tokens: number | null
@@ -81,6 +86,7 @@ export type Database = {
         Insert: {
           completion_tokens?: number | null
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           model: string
           prompt_tokens?: number | null
@@ -91,6 +97,7 @@ export type Database = {
         Update: {
           completion_tokens?: number | null
           created_at?: string
+          duration_seconds?: number | null
           id?: string
           model?: string
           prompt_tokens?: number | null
