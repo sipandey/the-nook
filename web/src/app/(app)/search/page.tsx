@@ -120,7 +120,8 @@ export default function SearchPage() {
             </p>
             <p className="text-label-sm text-outline">
               The first time, it downloads a small (~34MB) model to this device. After
-              that, search is instant.
+              that, search stays on this device — no more downloads, no more waiting on
+              a network.
             </p>
             <button
               type="button"

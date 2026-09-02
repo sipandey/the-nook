@@ -1603,3 +1603,58 @@ itself can't write the fixture data — the setup path and the path
 under test are deliberately different mechanisms. Full sweep
 (typecheck/lint/test/build) all exit 0.
 
+### 2026-08-25 — NK-14: real-browser Smart Search measured at 1,005 entries, and a lesson about how to time it correctly
+
+**Decision:** Measured real browser WASM embedding + real retrieval at
+scale by driving the app's actual shipped code path end-to-end in a
+real browser — not a synthetic reproduction — against 1,005 entries (5
+existing preview fixtures + ~1,000 added temporarily to
+`src/lib/preview.ts` and reverted immediately after, confirmed via
+`git diff` showing no residual change). Full writeup:
+`docs/spikes/embedding-performance/RESULTS.md`.
+**Why:** The embedding-quality spike (2026-08-24) explicitly named two
+things it didn't answer — real-browser inference speed (it measured
+Node's `onnxruntime-node` backend) and retrieval behavior past 20
+entries — and the roadmap item existed specifically to close that gap
+with real measurements, not estimates.
+**A real methodology lesson, not just a result:** the first attempt to
+time retrieval latency measured "time between two separate
+`javascript_exec` tool calls" and got 5.4s — which turned out to be
+mostly this sandbox's own tool round-trip overhead, the exact same
+contamination this session already documented once for the auto-lock
+work (two sequential tool calls can carry several real seconds of
+latency that has nothing to do with what's being measured). Caught by
+recognizing the number felt wrong given how fast the underlying
+operations should plausibly be, not by assuming it was correct because
+a number came back. Fixed by bracketing the entire operation — type
+into the field, poll for "Searching…" to clear, compute elapsed —
+inside one `javascript_exec` script via `performance.now()`, so nothing
+crosses a tool-call boundary. The corrected measurements (~1.6–2.2s
+across three real queries) are what's recorded; the contaminated 5.4s
+number was discarded, not reported alongside as if it were a second
+data point.
+**Also found and fixed a real, unrelated selector bug during this same
+session, worth remembering:** `document.querySelector('input[type="text"]')`
+silently returned nothing for an `<input>` that visually, correctly
+existed on screen (confirmed via screenshot) — because that specific
+input has no explicit `type` attribute in the rendered HTML at all (an
+untyped `<input>` behaves as text via the DOM property default, but the
+CSS/`querySelector` *attribute* selector `[type="text"]` only matches
+an attribute that's actually present). Cost real time chasing a
+"hidden pane" / "stale execution context" theory before the actual,
+much simpler cause was found by reading the raw `body.innerHTML`
+directly rather than continuing to guess at selectors.
+**A real, concrete finding this surfaced, fixed in the same pass:**
+`search/page.tsx`'s onboarding copy said "search is instant" after the
+one-time model download — true at the quality spike's 20-entry scale,
+measurably false at 1,005 (~1.9s average per query). Reworded to a
+claim that stays true regardless of entry count (self-contained,
+no-more-downloads) rather than a speed claim that quietly stops being
+accurate as an archive grows.
+**Honestly still open, not claimed as closed:** a real low-end phone.
+No physical device access and no CPU-throttling capability were
+available in this session to approximate one — this spike closes the
+"Node vs. real browser" and "20 vs. 1,000+ entries" parts of the
+original gap with real numbers, not the device-tier part. Recorded as
+`NK-14: Partially done`, not `Done`, in `docs/ROADMAP.md`.
+
