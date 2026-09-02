@@ -49,7 +49,15 @@ function shortDay(iso: string): string {
   return new Date(iso).toLocaleDateString(undefined, { weekday: "long" });
 }
 
-function LoadingState({ isError, onBack }: { isError: boolean; onBack: () => void }) {
+function LoadingState({
+  isError,
+  isSpendCeilingReached,
+  onBack,
+}: {
+  isError: boolean;
+  isSpendCeilingReached: boolean;
+  onBack: () => void;
+}) {
   const [messageIndex, setMessageIndex] = useState(0);
 
   useEffect(() => {
@@ -61,7 +69,11 @@ function LoadingState({ isError, onBack }: { isError: boolean; onBack: () => voi
   if (isError) {
     return (
       <div className="font-editorial-sans mx-auto flex min-h-screen w-full max-w-md flex-col items-center justify-center gap-2 bg-inverse-surface px-6 text-center text-inverse-on-surface">
-        <p className="text-sm text-inverse-on-surface/70">Couldn&rsquo;t generate this recap.</p>
+        <p className="text-sm text-inverse-on-surface/70">
+          {isSpendCeilingReached
+            ? "Playback is temporarily paused — check back tomorrow."
+            : "Couldn’t generate this recap."}
+        </p>
         <button type="button" onClick={onBack} className="text-xs font-semibold underline">
           Back
         </button>
@@ -238,7 +250,13 @@ function StoryContent() {
   }
 
   if (!allDecrypted || narrative.isPending || cards.length === 0) {
-    return <LoadingState isError={narrative.isError} onBack={() => router.push("/playback")} />;
+    return (
+      <LoadingState
+        isError={narrative.isError}
+        isSpendCeilingReached={narrative.error?.message === "spend_ceiling_reached"}
+        onBack={() => router.push("/playback")}
+      />
+    );
   }
 
   const card = cards[index];

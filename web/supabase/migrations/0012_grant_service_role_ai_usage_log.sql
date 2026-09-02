@@ -1,0 +1,16 @@
+-- checkAggregateSpendCeiling (NK-13, src/lib/ai/usage.ts) is the second
+-- legitimate use of the service-role client — see the "sanctioned
+-- exceptions" comment on getSupabaseServiceRoleClient in
+-- src/lib/supabase/server.ts. Same gap class as 0008_grant_service_role.sql:
+-- BYPASSRLS only skips RLS *policies*, it doesn't grant the underlying SQL
+-- privilege to touch a table at all, and the local CLI instance (built
+-- purely by replaying migrations) never provisions that automatically the
+-- way Supabase's hosted platform does. 0008 was deliberately scoped to
+-- exactly the two tables the cron route touches — this one is exactly as
+-- narrow for the one new table this new use actually needs.
+--
+-- select only: the ceiling check only ever reads ai_usage_log to sum
+-- today's cost. Writing usage rows still goes through the normal
+-- per-request client (see recordAiUsage), which service_role never
+-- touches.
+grant select on ai_usage_log to service_role;

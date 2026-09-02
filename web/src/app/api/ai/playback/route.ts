@@ -18,7 +18,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generatePlaybackNarrative, TEXT_MODEL, type PlaybackInput } from "@/lib/ai/openai";
-import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
+import { checkAiRateLimit, checkAggregateSpendCeiling, recordAiUsage } from "@/lib/ai/usage";
 import { truncateToEntryLimit } from "@/lib/entryLimits";
 
 export async function POST(request: Request) {
@@ -42,6 +42,15 @@ export async function POST(request: Request) {
 
   if (!(await checkAiRateLimit(userId, "playback"))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  // NK-13 — distinct from rate_limited above: this isn't about this one
+  // user calling too often, it's the app-wide daily spend ceiling. The
+  // client shows a different message for the two (see
+  // playback/story/page.tsx) since they mean different things and imply
+  // different next steps ("wait a bit" vs "check back tomorrow").
+  if (!(await checkAggregateSpendCeiling())) {
+    return NextResponse.json({ error: "spend_ceiling_reached" }, { status: 429 });
   }
 
   const { narrative, usage } = await generatePlaybackNarrative(input);

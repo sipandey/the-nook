@@ -14,7 +14,7 @@ import {
   TEXT_MODEL,
   type ManifestationForDetection,
 } from "@/lib/ai/openai";
-import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
+import { checkAiRateLimit, checkAggregateSpendCeiling, recordAiUsage } from "@/lib/ai/usage";
 import { truncateToEntryLimit } from "@/lib/entryLimits";
 
 export async function POST(request: Request) {
@@ -35,6 +35,17 @@ export async function POST(request: Request) {
 
   if (!(await checkAiRateLimit(userId, "detect-signals"))) {
     return NextResponse.json({ signals: [], error: "rate_limited" }, { status: 429 });
+  }
+
+  // NK-13 — no distinct client-facing treatment needed here, unlike
+  // playback/transcribe: this route is already best-effort, fire-and-
+  // forget background enrichment (see useSignalDetector.ts's own doc
+  // comment) — a save never fails or shows an error because signal
+  // detection didn't run, whatever the reason. Silently returning no
+  // signals is exactly the existing behavior for every other early-out
+  // above; the ceiling is just one more.
+  if (!(await checkAggregateSpendCeiling())) {
+    return NextResponse.json({ signals: [] });
   }
 
   const { signals, usage } = await detectManifestationSignals(entryText, manifestations);

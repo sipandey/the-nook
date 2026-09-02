@@ -14,7 +14,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { transcribeAudio, TRANSCRIBE_MODEL } from "@/lib/ai/openai";
-import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
+import { checkAiRateLimit, checkAggregateSpendCeiling, recordAiUsage } from "@/lib/ai/usage";
 
 export async function POST(request: Request) {
   const { userId } = await auth();
@@ -29,6 +29,12 @@ export async function POST(request: Request) {
 
   if (!(await checkAiRateLimit(userId, "transcribe"))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  // NK-13 — see the matching comment in the playback route on why this
+  // is a distinct error code from rate_limited above.
+  if (!(await checkAggregateSpendCeiling())) {
+    return NextResponse.json({ error: "spend_ceiling_reached" }, { status: 429 });
   }
 
   const { text, usage } = await transcribeAudio(audio);

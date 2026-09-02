@@ -137,12 +137,21 @@ export function VoiceRecorder({
       const formData = new FormData();
       formData.append("audio", blob, "entry.webm");
       const res = await fetch("/api/ai/transcribe", { method: "POST", body: formData });
-      if (!res.ok) throw new Error("transcribe failed");
+      if (!res.ok) {
+        // NK-13 — the ceiling gets a distinct, accurate message; anything
+        // else keeps the existing generic one.
+        const body = await res.json().catch(() => null);
+        throw new Error(body?.error === "spend_ceiling_reached" ? "spend_ceiling_reached" : "transcribe_failed");
+      }
       const { text } = await res.json();
       onTranscribed(text);
-    } catch {
+    } catch (err) {
       setStatus("error");
-      setError("Couldn't transcribe that recording. Try again.");
+      setError(
+        err instanceof Error && err.message === "spend_ceiling_reached"
+          ? "Voice transcription is temporarily paused — try again tomorrow, or switch to typing."
+          : "Couldn't transcribe that recording. Try again.",
+      );
     }
   }
 

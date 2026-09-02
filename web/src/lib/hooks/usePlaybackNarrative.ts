@@ -68,7 +68,15 @@ export function usePlaybackNarrative() {
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify(input),
             });
-            if (!res.ok) throw new Error("Failed to generate playback");
+            if (!res.ok) {
+              // Preserve the route's specific error code (e.g.
+              // "spend_ceiling_reached" — NK-13) as the thrown Error's
+              // message, so the UI can tell "AI features are paused for
+              // today" apart from a generic failure, instead of a single
+              // undifferentiated error state for both.
+              const body = await res.json().catch(() => null);
+              throw new Error(body?.error ?? "Failed to generate playback");
+            }
             return (await res.json()) as PlaybackNarrative;
           })();
 

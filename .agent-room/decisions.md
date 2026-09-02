@@ -1542,3 +1542,64 @@ real fixture entry (not just read from the diff); confirmed the "X /
 10,000" counter appears only past the 80% combined-length threshold and
 is absent below it.
 
+### 2026-08-25 — NK-13: aggregate spend ceiling, and a third instance of the same grant-gap class
+
+**Decision:** $1/day, configurable via `AI_DAILY_SPEND_CEILING_USD`,
+computed against real current OpenAI pricing (gpt-4o-mini $0.15/$0.60
+per 1M input/output tokens, whisper-1 $0.006/minute — fetched from
+OpenAI's published pricing page, not recalled). Covers all four
+`/api/ai/*` routes, including transcribe. Degradation is per-route, not
+uniform: `prompt` silently serves a static fallback with no error
+surfaced at all (a daily prompt is low-stakes enough that a degraded-
+mode message would be more disruptive than the degradation itself);
+`detect-signals` silently returns no signals, matching its already-
+established best-effort/fire-and-forget posture
+(`useSignalDetector.ts`); `playback` and `transcribe` — both explicit,
+deliberate user actions with no silent fallback available — get a
+distinct, accurate message ("temporarily paused... check back
+tomorrow" / "try typing instead") rather than either a generic error or
+silence.
+**Why:** Whisper bills by audio duration, not tokens, so `ai_usage_log`'s
+existing token columns couldn't price it — the honest choice was
+between a real migration or an aggregate ceiling that quietly excludes
+one of the four routes it claims to bound. Chose correctness: added
+`duration_seconds` (`0011_ai_usage_log_duration.sql`), captured it from
+`transcribeAudio`'s existing (already-present, previously unused)
+duration-variant usage response, and priced it in
+`computeCallCostUsd` (`src/lib/ai/cost.ts`, TDD'd) alongside the
+token-based routes.
+**A third instance of the exact grant-gap class found in NK-10 and
+NK-16, this time on `ai_usage_log`:** the aggregate check is a genuine
+cross-user read, which the normal per-request client structurally
+cannot do (RLS scopes it to the caller's own rows) — needing the
+service-role client, previously used in exactly one place
+(`daily-reminder` cron) with a doc comment that said "never call it
+from a route reachable by a browser/user request." Updated that
+comment to describe both sanctioned uses and *why* this one is safe
+despite being called from a user-reachable route (`playback`,
+`transcribe`, etc.): the aggregate dollar figure it computes is used
+only as an internal boolean gate, never returned to the client in raw
+or per-user form — no path for one user's individual usage to leak to
+another. Verification against the real local instance then hit exactly
+the same wall NK-10 and NK-16 both hit: `service_role` had zero grants
+on `ai_usage_log` specifically (0008's grant migration was deliberately
+scoped to only the two tables the cron route touches, so this was never
+an oversight in 0008 — it's a genuinely new need). Fixed with
+`0012_grant_service_role_ai_usage_log.sql`, `select`-only — the ceiling
+check only ever reads; `recordAiUsage` still writes via the normal
+per-user client, confirmed by writing a verification step that expects
+a service-role write attempt to be rejected, not just checking that
+reads work.
+**Verified against real seeded rows on the local instance, not
+assumed:** zero usage → under ceiling; small usage → still under;
+usage crossing $1 split across two *different* users → correctly trips
+(the aggregate is genuinely cross-user, not accidentally still
+per-user); whisper-1's duration pricing computed to the cent (60 real
+minutes → exactly $0.36); a lower configured ceiling tripping sooner
+than the default; and the service-role write-rejection above. Test rows
+seeded via `psql` directly (not the Supabase client), since
+`service_role`'s correctly-narrow grants mean the service-role client
+itself can't write the fixture data — the setup path and the path
+under test are deliberately different mechanisms. Full sweep
+(typecheck/lint/test/build) all exit 0.
+

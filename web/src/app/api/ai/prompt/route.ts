@@ -33,11 +33,19 @@
 import { NextResponse } from "next/server";
 import { auth } from "@clerk/nextjs/server";
 import { generateDailyPrompt, DAILY_PROMPT_TEMPLATE_VERSION, TEXT_MODEL } from "@/lib/ai/openai";
-import { checkAiRateLimit, recordAiUsage } from "@/lib/ai/usage";
+import { checkAiRateLimit, checkAggregateSpendCeiling, recordAiUsage } from "@/lib/ai/usage";
 import { getSupabaseServerClient } from "@/lib/supabase/server";
 import { DEFAULT_TONE, type Tone } from "@/lib/tone";
 
 const UNIQUE_VIOLATION = "23505";
+
+// NK-13 fallback when the aggregate daily spend ceiling is hit — not an
+// error, just today's prompt not being freshly generated. A daily prompt
+// is low-stakes enough (unlike playback or transcription, which are
+// explicit user actions with nothing to fall back to) that silently
+// serving something reasonable beats surfacing a degraded-mode message
+// for it.
+const FALLBACK_PROMPT = "What's one thing on your mind today?";
 
 export async function GET(request: Request) {
   const { userId } = await auth();
@@ -66,6 +74,10 @@ export async function GET(request: Request) {
 
   if (!(await checkAiRateLimit(userId, "prompt"))) {
     return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
+  if (!(await checkAggregateSpendCeiling())) {
+    return NextResponse.json({ prompt: FALLBACK_PROMPT, tone });
   }
 
   const { prompt, usage } = await generateDailyPrompt(tone, []);
